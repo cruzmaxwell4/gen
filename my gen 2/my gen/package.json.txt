@@ -1,0 +1,20 @@
+{
+  "name": "generator-bot",
+  "version": "1.0.0",
+  "description": "Discord account generator bot with stock management, drops, subscriptions, and invite tracking",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "jszip": "^3.10.1"
+  }
+}
