@@ -189,6 +189,8 @@ module.exports = {
     const fullBlocks = Math.min(maxBlocks, Math.max(0, Math.round((left / 100) * maxBlocks)));
     const emptyBlocks = maxBlocks - fullBlocks;
     const stockBar = '▰'.repeat(fullBlocks) + '▪'.repeat(emptyBlocks);
+    const borderLeft = category === 'free' ? '🟢' : '🟡';
+    const borderRight = category === 'free' ? '🟢' : '🟡';
 
     const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
@@ -200,7 +202,7 @@ module.exports = {
         (category === 'free'
           ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free\nCheck your dms for login details! 📩`
           : `<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium\nCheck your dms for login details! 📩`
-        ) + `\n\n📦 Stock Remaining\n🟦${stockBar}🟦 (${left}) left`
+        ) + `\n\n📦 Stock Remaining\n${borderLeft}${stockBar}${borderRight} (${left}) left`
       )
       .setFooter({ text: `Generator • Use /generate to claim your own • Today at ${time}` });
 
