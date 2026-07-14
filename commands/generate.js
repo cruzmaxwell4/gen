@@ -3,7 +3,7 @@ const { getConfig, getUser, updateUser, popStock, restoreStock, stockCount, getB
 const { hasGenerateAccess, isOwner } = require('../utils');
 
 const CATEGORY_COLORS = { free: 0x57F287, 'free+': 0x5865F2, premium: 0xFEE75C };
-const CATEGORY_LABELS = { free: '🟢 Free', 'free+': '🔵 Free+', premium: '⭐ Premium' };
+const CATEGORY_LABELS = { free: '🌟🟢Free Account Made🟢🌟', 'free+': '🔵 Free+', premium: '🌟⭐Premium Account Made⭐🌟' };
 
 const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
@@ -168,11 +168,11 @@ module.exports = {
     }
 
     updateUser(interaction.user.id, { [`last_gen_${catKey}`]: now, last_gen: now });
-    const left = stockCount(category);
 
     const { credentials, skinLink, username, detailLines, currencyFields } = parseAccount(raw);
 
     const guildIconURL = interaction.guild.iconURL({ dynamic: true });
+    const userAvatarURL = interaction.user.displayAvatarURL({ dynamic: true, size: 256 });
     const color        = CATEGORY_COLORS[category];
 
     // Banner: either an uploaded file stored on disk (local:) or a direct URL
@@ -186,8 +186,9 @@ module.exports = {
     const channelEmbed = new EmbedBuilder()
       .setColor(color)
       .setAuthor({ name: 'Account Generated', iconURL: guildIconURL || undefined })
-      .setDescription(`<@${interaction.user.id}> generated an account!`)
-      .setFooter({ text: `Generator • ${left} left in stock` });
+      .setThumbnail(userAvatarURL)
+      .setDescription(`<@${interaction.user.id}>! just generated an account! Check your DMs 📬`)
+      .setFooter({ text: 'Generator' });
 
     if (bannerURL) channelEmbed.setImage(bannerURL);
 
@@ -197,7 +198,8 @@ module.exports = {
     const dmEmbed = new EmbedBuilder()
       .setColor(color)
       .setAuthor({ name: interaction.guild.name, iconURL: guildIconURL || undefined })
-      .setTitle(username ? `Generated Account — ${username}` : `Generated Account — ${CATEGORY_LABELS[category]}`)
+      .setThumbnail(userAvatarURL)
+      .setTitle(username ? `${CATEGORY_LABELS[category]} — ${username}` : `${CATEGORY_LABELS[category]}`)
       .setDescription(dmDescription)
       .setFooter({ text: 'Generator • Do NOT share your credentials with anyone' })
       .setTimestamp();
