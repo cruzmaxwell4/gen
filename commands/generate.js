@@ -137,7 +137,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(0xED4245)
         .setTitle('❌ Out of Stock')
-        .setDescription(`**${CATEGORY_LABELS[category]}** accounts are currently out of stock.\nCheck back soon!`)
+        .setDescription(`✖️ OUT OF STOCK COME BACK LATER! ✖️`)
         .setTimestamp();
       return interaction.editReply({ embeds: [embed] });
     }
@@ -162,7 +162,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor(0xED4245)
         .setTitle('❌ Out of Stock')
-        .setDescription(`**${CATEGORY_LABELS[category]}** accounts are currently out of stock.\nCheck back soon!`)
+        .setDescription(`✖️ OUT OF STOCK COME BACK LATER! ✖️`)
         .setTimestamp();
       return interaction.editReply({ embeds: [embed] });
     }
@@ -187,7 +187,13 @@ module.exports = {
       .setColor(color)
       .setAuthor({ name: 'Account Generated', iconURL: guildIconURL || undefined })
       .setThumbnail(userAvatarURL)
-      .setDescription(`<@${interaction.user.id}>! just generated an account! Check your DMs 📬`)
+      .setDescription(
+        category === 'free'
+          ? `<@${interaction.user.id}>! 🌊🟢Free Account Gneratored🟢🌊`
+          : category === 'premium'
+            ? `<@${interaction.user.id}>! 🌟⭐Premium Account genoratored⭐🌟`
+            : `<@${interaction.user.id}>! just generated an account! Check your DMs 📬`
+      )
       .setFooter({ text: 'Generator' });
 
     if (bannerURL) channelEmbed.setImage(bannerURL);
