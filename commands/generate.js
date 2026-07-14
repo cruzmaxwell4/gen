@@ -182,16 +182,27 @@ module.exports = {
       : (/^https?:\/\//.test(genImage) ? genImage : null);
 
     // ---- CHANNEL EMBED (matches screenshot: minimal + big image) ----
+    const left = stockCount(category);
+
+    // Visual stock progress bar (assumes max stock of ~100 for percentage calc)
+    const maxBlocks = 10;
+    const fullBlocks = Math.min(maxBlocks, Math.max(0, Math.round((left / 100) * maxBlocks)));
+    const emptyBlocks = maxBlocks - fullBlocks;
+    const stockBar = '▰'.repeat(fullBlocks) + '▪'.repeat(emptyBlocks);
+
+    const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
     const channelEmbed = new EmbedBuilder()
       .setColor(color)
       .setAuthor({ name: 'Account Generated', iconURL: guildIconURL || undefined })
       .setThumbnail(userAvatarURL)
       .setDescription(
-        category === 'free'
+        (category === 'free'
           ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free\nCheck your dms for login details! 📩`
           : `<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium\nCheck your dms for login details! 📩`
+        ) + `\n\n📦 Stock Remaining\n${stockBar} (${left}) left`
       )
-      .setFooter({ text: 'Generator' });
+      .setFooter({ text: `Generator • Use /generate to claim your own • Today at ${time}` });
 
     if (bannerURL) channelEmbed.setImage(bannerURL);
 
