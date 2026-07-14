@@ -198,6 +198,16 @@ module.exports = {
 
     if (bannerURL) channelEmbed.setImage(bannerURL);
 
+    // Onami Gen 3D box branding — shown below the tier info in the channel embed.
+    // Configure via /config (or the config store) with key "onami_box_image" set
+    // to a direct image URL of the 3D box graphic.
+    const onamiBoxImage = getConfig('onami_box_image') || '';
+    if (onamiBoxImage) {
+      channelEmbed.addFields({ name: '\u200b', value: '\u200b', inline: false });
+      channelEmbed.addFields({ name: '📦 Onami Gen', value: `[View 3D Box](${onamiBoxImage})`, inline: false });
+      if (!bannerURL) channelEmbed.setImage(onamiBoxImage);
+    }
+
     // ---- DM EMBED (matches screenshot: detail block + currency columns + credentials + skin link) ----
     const dmDescription = detailLines.length > 0 ? detailLines.join('\n') : '\u200b';
 
