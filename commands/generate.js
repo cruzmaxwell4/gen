@@ -200,9 +200,9 @@ module.exports = {
       .setThumbnail(userAvatarURL)
       .setDescription(
         (category === 'free'
-          ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free\n\nCheck your dms for login details! 📬`
-          : `<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium\n\nCheck your dms for login details! 📬`
-        ) + `\n\n📦 Stock Remaining\n${borderLeft}${stockBar}${borderRight} (${left}) left`
+          ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free**\n\n**Check your dms for login details! 📬**`
+          : `**<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium**\n\n**Check your dms for login details! 📬**`
+        ) + `\n\n**📦 Stock Remaining**\n**${borderLeft}${stockBar}${borderRight} (${left}) left**`
       )
       .setFooter({ text: `Generator • Use /generate to claim your own • Today at ${time}` });
 
