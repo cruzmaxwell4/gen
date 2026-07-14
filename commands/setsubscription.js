@@ -20,11 +20,18 @@ module.exports = {
           { name: 'Premium', value: 'premium' }
         )
     )
-    .addIntegerOption(opt =>
-      opt.setName('days')
-        .setDescription('How many days (leave blank for permanent)')
-        .setRequired(false)
-        .setMinValue(1)
+    .addStringOption(opt =>
+      opt.setName('duration')
+        .setDescription('Subscription duration')
+        .setRequired(true)
+        .addChoices(
+          { name: '1 Day',     value: '1' },
+          { name: '3 Days',    value: '3' },
+          { name: '1 Week',    value: '7' },
+          { name: '1 Month',   value: '30' },
+          { name: '3 Months',  value: '90' },
+          { name: 'Lifetime',  value: 'lifetime' }
+        )
     ),
 
   async execute(interaction) {
@@ -33,7 +40,8 @@ module.exports = {
 
     const target = interaction.options.getUser('user');
     const tier = interaction.options.getString('tier');
-    const days = interaction.options.getInteger('days');
+    const duration = interaction.options.getString('duration');
+    const days = duration === 'lifetime' ? null : parseInt(duration, 10);
 
     getUser(target.id);
     const expires = days ? Math.floor(Date.now() / 1000) + days * 86400 : 0;
