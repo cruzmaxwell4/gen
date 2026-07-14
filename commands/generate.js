@@ -189,10 +189,10 @@ module.exports = {
       .setThumbnail(userAvatarURL)
       .setDescription(
         category === 'free'
-          ? `<@${interaction.user.id}>! 🌊🟢Free Account Gneratored🟢🌊`
+          ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🌊🟢Free🟢🌊\nCheck your dms for login details! 📩`
           : category === 'premium'
-            ? `<@${interaction.user.id}>! 🌟⭐Premium Account genoratored⭐🌟`
-            : `<@${interaction.user.id}>! just generated an account! Check your DMs 📬`
+            ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🌊🌟Premium🌟🌊\nCheck your dms for login details! 📩`
+            : `<@${interaction.user.id}> Claimed A Account!! Tier: 🌊🌟Free+🌟🌊\nCheck your dms for login details! 📩`
       )
       .setFooter({ text: 'Generator' });
 
