@@ -2,8 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const { getConfig, getUser, updateUser, popStock, restoreStock, stockCount, getBannerFile } = require('../database');
 const { hasGenerateAccess, isOwner } = require('../utils');
 
-const CATEGORY_COLORS = { free: 0x57F287, 'free+': 0x5865F2, premium: 0xFEE75C };
-const CATEGORY_LABELS = { free: '🌟🟢Free Account Made🟢🌟', 'free+': '🔵 Free+', premium: '🌟⭐Premium Account Made⭐🌟' };
+const CATEGORY_COLORS = { free: 0x57F287, premium: 0xFEE75C };
+const CATEGORY_LABELS = { free: '🌟🟢Free Account Made🟢🌟', premium: '🌟⭐Premium Account Made⭐🌟' };
 
 const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
@@ -81,7 +81,6 @@ module.exports = {
         .setRequired(true)
         .addChoices(
           { name: '🟢 Free',    value: 'free' },
-          { name: '🔵 Free+',   value: 'free+' },
           { name: '⭐ Premium', value: 'premium' }
         )
     ),
@@ -190,9 +189,7 @@ module.exports = {
       .setDescription(
         category === 'free'
           ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free\nCheck your dms for login details! 📩`
-          : category === 'premium'
-            ? `<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium\nCheck your dms for login details! 📩`
-            : `<@${interaction.user.id}> Claimed A Account!! Tier: 🔵Free+\nCheck your dms for login details! 📩`
+          : `<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium\nCheck your dms for login details! 📩`
       )
       .setFooter({ text: 'Generator' });
 
