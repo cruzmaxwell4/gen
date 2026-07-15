@@ -56,4 +56,4 @@ function hasGenerateAccess(member, category) {
   return hasRole || hasActiveSub(member.id, category);
 }
 
-module.exports = { CATEGORIES, isOwner, ownerOnly, getCategoryRoleId, hasGenerateAccess, hasActiveSub };
+module.exports = { CATEGORIES, TIER_RANK, isOwner, ownerOnly, getCategoryRoleId, hasGenerateAccess, hasActiveSub };
