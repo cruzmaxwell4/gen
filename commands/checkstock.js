@@ -16,6 +16,7 @@ module.exports = {
     }
 
     const free = stockCount('free');
+    const freeplus = stockCount('free+');
     const premium = stockCount('premium');
 
     const embed = new EmbedBuilder()
@@ -23,6 +24,7 @@ module.exports = {
       .setTitle('📦 Stock Levels')
       .setDescription(
         `🟢 **Free Accounts**: ${free}\n` +
+        `🔵 **Free+ Accounts**: ${freeplus}\n` +
         `⭐ **Premium Accounts**: ${premium}`
       )
       .setFooter({ text: `Last checked: ${new Date().toLocaleString()}` })

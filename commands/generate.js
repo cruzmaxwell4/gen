@@ -2,8 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const { getConfig, getUser, updateUser, popStock, restoreStock, stockCount, getBannerFile } = require('../database');
 const { hasGenerateAccess, isOwner } = require('../utils');
 
-const CATEGORY_COLORS = { free: 0x57F287, premium: 0xFEE75C };
-const CATEGORY_LABELS = { free: '🌟🟢Free Account Made🟢🌟', premium: '🌟⭐Premium Account Made⭐🌟' };
+const CATEGORY_COLORS = { free: 0x57F287, 'free+': 0x5865F2, premium: 0xFEE75C };
+const CATEGORY_LABELS = { free: '🌟🟢Free Account Made🟢🌟', 'free+': '🌟🔵Free+ Account Made🔵🌟', premium: '🌟⭐Premium Account Made⭐🌟' };
 
 const wait = (ms) => new Promise(res => setTimeout(res, ms));
 
@@ -81,6 +81,7 @@ module.exports = {
         .setRequired(true)
         .addChoices(
           { name: '🟢 Free',    value: 'free' },
+          { name: '⛈️ Free plus', value: 'free+' },
           { name: '⭐ Premium', value: 'premium' }
         )
     ),
@@ -189,8 +190,8 @@ module.exports = {
     const fullBlocks = Math.min(maxBlocks, Math.max(0, Math.round((left / 100) * maxBlocks)));
     const emptyBlocks = maxBlocks - fullBlocks;
     const stockBar = '▰'.repeat(fullBlocks) + '▪'.repeat(emptyBlocks);
-    const borderLeft = category === 'free' ? '🟢' : '🟡';
-    const borderRight = category === 'free' ? '🟢' : '🟡';
+    const borderLeft = category === 'free' ? '🟢' : category === 'free+' ? '🔵' : '🟡';
+    const borderRight = category === 'free' ? '🟢' : category === 'free+' ? '🔵' : '🟡';
 
     const time = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 
@@ -201,7 +202,9 @@ module.exports = {
       .setDescription(
         (category === 'free'
           ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free**\n\n**Check your dms for login details! 📬**`
-          : `**<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium**\n\n**Check your dms for login details! 📬**`
+          : category === 'free+'
+            ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🔵Free+**\n\n**Check your dms for login details! 📬**`
+            : `**<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium**\n\n**Check your dms for login details! 📬**`
         ) + `\n\n**📦 Stock Remaining**\n**${borderLeft}${stockBar}${borderRight} (${left}) left**`
       )
       .setFooter({ text: `Generator • Use /generate to claim your own • Today at ${time}` });
