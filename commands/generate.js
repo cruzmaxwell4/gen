@@ -81,7 +81,7 @@ module.exports = {
         .setRequired(true)
         .addChoices(
           { name: '🟢 Free',    value: 'free' },
-          { name: '⛈️ Free plus', value: 'free+' },
+          { name: '🔵 Free+', value: 'free+' },
           { name: '⭐ Premium', value: 'premium' }
         )
     ),
