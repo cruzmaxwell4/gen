@@ -80,9 +80,9 @@ module.exports = {
         .setDescription('Which account type to generate')
         .setRequired(true)
         .addChoices(
-          { name: '🟢 Free',    value: 'free' },
-          { name: '🔵 Free+', value: 'free+' },
-          { name: '⭐ Premium', value: 'premium' }
+          { name: '🌊 Free',    value: 'free' },
+          { name: '🌊 Free+', value: 'free+' },
+          { name: '🌟 Premium', value: 'premium' }
         )
     ),
 
@@ -201,9 +201,9 @@ module.exports = {
       .setThumbnail(userAvatarURL)
       .setDescription(
         (category === 'free'
-          ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🟢Free**\n\n**Check your dms for login details! 📬**`
+          ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🌊Free**\n\n**Check your dms for login details! 📬**`
           : category === 'free+'
-            ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🔵Free+**\n\n**Check your dms for login details! 📬**`
+            ? `**<@${interaction.user.id}> Claimed A Account!! Tier: 🌊Free+**\n\n**Check your dms for login details! 📬**`
             : `**<@${interaction.user.id}> Claimed A Account!! Tier: 🌟Premium**\n\n**Check your dms for login details! 📬**`
         ) + `\n\n**📦 Stock Remaining**\n**${borderLeft}${stockBar}${borderRight} (${left}) left**`
       )
