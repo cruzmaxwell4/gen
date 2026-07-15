@@ -51,28 +51,39 @@ module.exports = {
     let roleNote = '';
     const member = interaction.guild ? await interaction.guild.members.fetch(target.id).catch(() => null) : null;
     if (member) {
-      const tierRoles = {
+      const roles = {
         free:    getCategoryRoleId('free'),
         'free+': getCategoryRoleId('free+'),
         premium: getCategoryRoleId('premium'),
+        none:    null
       };
-      for (const [t, rid] of Object.entries(tierRoles)) {
-        if (!rid || !member.roles.cache.has(rid)) continue;
-        // Always keep the free role unless we're explicitly setting tier to 'none'
-        if (t === 'free' && tier !== 'none') continue;
-        // Only remove roles that are strictly higher than the new tier
-        const tierRank = TIER_RANK[tier] || 0;
-        const tRank = TIER_RANK[t] || 0;
-        if (t !== tier && (tier === 'none' || tRank > tierRank)) {
+
+      // Remove higher tier roles if setting to a lower tier
+      const tierRank = TIER_RANK[tier] ?? 0;
+      const allTiers = ['free', 'free+', 'premium'];
+      
+      for (const t of allTiers) {
+        const rid = roles[t];
+        if (!rid) continue;
+        
+        const tRank = TIER_RANK[t] ?? 0;
+        const shouldRemove = t !== tier && (tier === 'none' || tRank > tierRank);
+        
+        if (shouldRemove && member.roles.cache.has(rid)) {
           await member.roles.remove(rid).catch(() => {});
         }
       }
-      if (tier !== 'none' && tierRoles[tier]) {
-        const ok = await member.roles.add(tierRoles[tier]).then(() => true).catch(() => false);
-        roleNote = ok ? `Granted <@&${tierRoles[tier]}>` : '⚠️ Could not assign role — check the bot has **Manage Roles** and its role is **above** the tier role.';
-      } else if (tier !== 'none' && !tierRoles[tier]) {
-        roleNote = '⚠️ No role set for this tier yet — run `/setroles` so subscribers get access.';
-      } else if (tier === 'none') {
+
+      // Add new tier role if not 'none'
+      if (tier !== 'none') {
+        const roleId = roles[tier];
+        if (roleId) {
+          const ok = await member.roles.add(roleId).then(() => true).catch(() => false);
+          roleNote = ok ? `Granted <@&${roleId}>` : '⚠️ Could not assign role — check the bot has **Manage Roles** and its role is **above** the tier role.';
+        } else {
+          roleNote = '⚠️ No role set for this tier yet — run `/setroles` so subscribers get access.';
+        }
+      } else {
         roleNote = 'All tier roles removed.';
       }
     }
