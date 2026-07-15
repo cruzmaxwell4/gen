@@ -61,7 +61,9 @@ module.exports = {
         // Always keep the free role unless we're explicitly setting tier to 'none'
         if (t === 'free' && tier !== 'none') continue;
         // Only remove roles that are strictly higher than the new tier
-        if (t !== tier && (tier === 'none' || TIER_RANK[t] > TIER_RANK[tier])) {
+        const tierRank = TIER_RANK[tier] || 0;
+        const tRank = TIER_RANK[t] || 0;
+        if (t !== tier && (tier === 'none' || tRank > tierRank)) {
           await member.roles.remove(rid).catch(() => {});
         }
       }
@@ -91,3 +93,4 @@ module.exports = {
     await interaction.editReply({ embeds: [embed] });
   }
 };
+
