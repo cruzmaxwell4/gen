@@ -34,7 +34,12 @@ function hasActiveSub(userId, category) {
 }
 
 function hasGenerateAccess(member, category) {
+  // Guard against null/undefined member
+  if (!member || !member.id) return false;
   if (isOwner(member.id)) return true;
+
+  // Guard against missing roles
+  if (!member.roles || !member.roles.cache) return false;
 
   const roleId = getCategoryRoleId(category);
   const roleName = category === 'free+' ? 'free+' : category;
