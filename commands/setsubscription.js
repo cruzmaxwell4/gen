@@ -25,6 +25,9 @@ module.exports = {
         .setDescription('Subscription duration')
         .setRequired(true)
         .addChoices(
+          { name: '1 Hour',    value: '0.0417' },
+          { name: '3 Hours',   value: '0.125' },
+          { name: '6 Hours',   value: '0.25' },
           { name: '1 Day',     value: '1' },
           { name: '3 Days',    value: '3' },
           { name: '1 Week',    value: '7' },
@@ -41,7 +44,7 @@ module.exports = {
     const target = interaction.options.getUser('user');
     const tier = interaction.options.getString('tier');
     const duration = interaction.options.getString('duration');
-    const days = duration === 'lifetime' ? null : parseInt(duration, 10);
+    const days = duration === 'lifetime' ? null : parseFloat(duration);
 
     getUser(target.id);
     const expires = days ? Math.floor(Date.now() / 1000) + days * 86400 : 0;
