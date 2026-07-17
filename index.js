@@ -102,6 +102,22 @@ async function sweepExpiredSubs(client) {
   }
 }
 
+// Auto-leave any server that isn't the main one
+client.on('guildCreate', async (guild) => {
+  const mainGuildId = process.env.OWNER_GUILD_ID || getConfig('main_guild_id');
+  
+  if (guild.id !== mainGuildId) {
+    try {
+      await guild.leave();
+      console.log(`⛔ Left server: ${guild.name} (${guild.id}) - Not authorized to be there.`);
+    } catch (err) {
+      console.error(`❌ Failed to leave ${guild.name}:`, err);
+    }
+  } else {
+    console.log(`✅ Added to authorized server: ${guild.name}`);
+  }
+});
+
 client.on('guildMemberAdd', async (member) => {
   try {
     const newInvites = await member.guild.invites.fetch();
@@ -274,3 +290,4 @@ process.on('uncaughtException', (err) => {
 });
 
 client.login(process.env.BOT_TOKEN);
+
