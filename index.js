@@ -61,6 +61,18 @@ client.once('ready', async () => {
   setInterval(() => sweepExpiredSubs(client).catch(() => {}), 5 * 60 * 1000);
 });
 
+client.on('guildCreate', async (guild) => {
+  const ownerServerId = process.env.OWNER_SERVER_ID;
+  if (ownerServerId && guild.id !== ownerServerId) {
+    try {
+      await guild.leave();
+      console.log(`Left unauthorized server: ${guild.name} (${guild.id})`);
+    } catch (err) {
+      console.error(`Error leaving server ${guild.name}:`, err);
+    }
+  }
+});
+
 // The bot's "Playing ..." profile status. Text/type are saved via /setstatus and
 // re-applied on every boot so it survives restarts.
 const ACTIVITY_TYPES = {
