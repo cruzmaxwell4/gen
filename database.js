@@ -10,6 +10,29 @@ if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 const stockDir = path.join(dataDir, 'stock');
 if (!fs.existsSync(stockDir)) fs.mkdirSync(stockDir, { recursive: true });
 
+// Ensure critical data files exist with proper defaults on startup
+function ensureDataFiles() {
+  const criticalFiles = {
+    'config.json': {},
+    'drop_config.json': {},
+    'users.json': {},
+    'vouches.json': [],
+    'invite_joins.json': [],
+    'invites.json': {},
+    'stock.json': {},
+    'drop_stock.json': {}
+  };
+
+  for (const [file, def] of Object.entries(criticalFiles)) {
+    const p = path.join(dataDir, file);
+    if (!fs.existsSync(p)) {
+      fs.writeFileSync(p, JSON.stringify(def, null, 2));
+    }
+  }
+}
+
+ensureDataFiles();
+
 function loadJson(file, def) {
   const p = path.join(dataDir, file);
   if (!fs.existsSync(p)) { fs.writeFileSync(p, JSON.stringify(def, null, 2)); return def; }
@@ -71,6 +94,7 @@ module.exports = {
   updateUser(id, fields) {
     const users = STORES.users();
     if (!users[id]) users[id] = { id, tokens: 0, subscription: 'none', sub_expires: 0, plus_time: 0, joins: 0, messages: 0, last_gen: 0, last_drop: 0 };
+    // IMPORTANT: Preserve existing fields, only update the ones specified
     Object.assign(users[id], fields);
     saveJson('users.json', users);
   },
@@ -231,3 +255,4 @@ module.exports = {
     } catch {}
   }
 };
+
