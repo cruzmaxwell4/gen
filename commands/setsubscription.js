@@ -25,6 +25,7 @@ module.exports = {
         .setDescription('Subscription duration')
         .setRequired(true)
         .addChoices(
+          { name: '30 Minutes', value: '0.0208' },
           { name: '1 Hour',    value: '0.0417' },
           { name: '3 Hours',   value: '0.125' },
           { name: '6 Hours',   value: '0.25' },
