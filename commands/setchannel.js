@@ -8,7 +8,7 @@ module.exports = {
     .setDescription('Set channel tier restrictions for /generate (owner only)')
     .addStringOption(opt =>
       opt.setName('tier')
-        .setDescription('Which tier(s) can use /generate in this channel'')
+        .setDescription('Which tier(s) can use /generate in this channel')
         .setRequired(true)
         .addChoices(
           { name: '🌊 Free Only', value: 'free' },
@@ -22,7 +22,7 @@ module.exports = {
     )
     .addChannelOption(opt =>
       opt.setName('channel')
-        .setDescription('Channel to restrict (leave blank = all channels)'')
+        .setDescription('Channel to restrict (leave blank = all channels)')
         .setRequired(false)
     ),
 
