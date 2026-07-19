@@ -8,16 +8,12 @@ module.exports = {
     .setDescription('Set channel tier restrictions for /generate (owner only)')
     .addStringOption(opt =>
       opt.setName('tier')
-        .setDescription('Which tier(s) can use /generate in this channel')
+        .setDescription('Which tier can ONLY use /generate in this channel')
         .setRequired(true)
         .addChoices(
           { name: '🌊 Free Only', value: 'free' },
           { name: '🌊 Free+ Only', value: 'free+' },
-          { name: '🌟 Premium Only', value: 'premium' },
-          { name: '🌊 Free & Free+ (no Premium)', value: 'free,free+' },
-          { name: '🌊 Free & Premium (no Free+)', value: 'free,premium' },
-          { name: '🌊 Free+ & Premium (no Free)', value: 'free+,premium' },
-          { name: '🌊 All Tiers (no restriction)', value: 'all' }
+          { name: '🌟 Premium Only', value: 'premium' }
         )
     )
     .addChannelOption(opt =>
@@ -34,40 +30,44 @@ module.exports = {
     const channel = interaction.options.getChannel('channel');
 
     // Save tier restriction
-    setConfig('gen_channel_tier', tier === 'all' ? '' : tier);
+    setConfig('gen_channel_tier', tier);
     
     // Save channel ID
     setConfig('gen_channel', channel ? channel.id : '');
 
+    const tierEmoji = {
+      free: '🌊',
+      'free+': '🌊',
+      premium: '🌟'
+    }[tier];
+
+    const tierLabel = {
+      free: 'Free',
+      'free+': 'Free+',
+      premium: 'Premium'
+    }[tier];
+
     let description = '';
 
     if (!channel) {
-      description = '✅ **Tier restriction applies to all channels**';
+      description = `✅ **Only ${tierEmoji} ${tierLabel} can use /generate (all channels)**`;
     } else {
-      description = `✅ **Tier restriction applies to <#${channel.id}>**`;
+      description = `✅ **Only ${tierEmoji} ${tierLabel} can use /generate in <#${channel.id}>**`;
     }
 
-    description += '\n\n**Tier Access:**\n';
-
-    if (!tier || tier === 'all') {
-      description += '🌊 Free\n🌊 Free+\n🌟 Premium\n(All tiers can use /generate)';
-    } else if (tier === 'free') {
-      description += '🌊 Free (only)\n❌ Free+ blocked\n❌ Premium blocked';
+    description += '\n\n**Access:**\n';
+    
+    if (tier === 'free') {
+      description += '🌊 Free ✅\n🌊 Free+ ❌\n🌟 Premium ❌';
     } else if (tier === 'free+') {
-      description += '❌ Free blocked\n🌊 Free+ (only)\n❌ Premium blocked';
+      description += '🌊 Free ❌\n🌊 Free+ ✅\n🌟 Premium ❌';
     } else if (tier === 'premium') {
-      description += '❌ Free blocked\n❌ Free+ blocked\n🌟 Premium (only)';
-    } else if (tier === 'free,free+') {
-      description += '🌊 Free\n🌊 Free+\n❌ Premium blocked';
-    } else if (tier === 'free,premium') {
-      description += '🌊 Free\n❌ Free+ blocked\n🌟 Premium';
-    } else if (tier === 'free+,premium') {
-      description += '❌ Free blocked\n🌊 Free+\n🌟 Premium';
+      description += '🌊 Free ❌\n🌊 Free+ ❌\n🌟 Premium ✅';
     }
 
     const embed = new EmbedBuilder()
       .setColor(0x57F287)
-      .setTitle('✅ Tier Restriction Set')
+      .setTitle('✅ Channel Tier Restriction Set')
       .setDescription(description)
       .setTimestamp();
 
