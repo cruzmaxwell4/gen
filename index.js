@@ -43,12 +43,12 @@ try {
         client.commands.set(cmd.data.name, cmd);
       }
     } catch (err) {
-      console.error(`⚠️ Failed to load command ${file}:`, err);
+      console.error(`⚠️ Failed to load command ${file}:`, err?.message || err);
     }
   }
   console.log(`✅ Loaded ${client.commands.size} commands`);
 } catch (err) {
-  console.error('❌ Failed to read commands directory:', err);
+  console.error('❌ Failed to read commands directory:', err?.message || err);
   process.exit(1);
 }
 
@@ -103,7 +103,7 @@ client.once('ready', async () => {
       console.error('⚠️ Failed to initialize subscription sweep:', err?.message || err);
     }
   } catch (err) {
-    console.error('❌ Critical error in ready event:', err);
+    console.error('❌ Critical error in ready event:', err?.message || err);
   }
 });
 
@@ -139,9 +139,11 @@ function applyPresence(client) {
     const text = String(getConfig('status_text', 'Generator | /generate') || 'Generator').slice(0, 128);
     const typeKey = String(getConfig('status_type', 'playing') || 'playing').toLowerCase();
     const type = ACTIVITY_TYPES[typeKey] ?? ActivityType.Playing;
-    client.user.setPresence({ activities: [{ name: text, type }], status: 'online' }).catch(err => {
+    try {
+      client.user.setPresence({ activities: [{ name: text, type }], status: 'online' });
+    } catch (err) {
       console.error('⚠️ Failed to set presence:', err?.message || err);
-    });
+    }
   } catch (err) {
     console.error('Error setting presence:', err?.message || err);
   }
