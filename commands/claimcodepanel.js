@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { popStock, getUser, updateUser, getConfig } = require('../database');
+const { getUser, updateUser, getConfig } = require('../database');
+const fs = require('fs');
+const path = require('path');
 
 // Duration in seconds
 const DURATION_SECONDS = {
@@ -17,14 +19,33 @@ const DURATION_DISPLAY = {
   'LIFETIME': '♾️ Lifetime'
 };
 
-// Map code duration to account tier
-const DURATION_TO_TIER = {
-  '1DAY': 'premium',
-  '3DAY': 'premium',
-  '1WEEK': 'premium',
-  '1MONTH': 'premium',
-  'LIFETIME': 'premium'
-};
+// Helper to find and remove a code from stock
+function findAndRemoveCode(code) {
+  const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
+  const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+
+  for (const dur of durations) {
+    const filePath = path.join(dataDir, `codes_${dur}.json`);
+    try {
+      if (!fs.existsSync(filePath)) continue;
+
+      let stock = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (!stock[dur]) stock[dur] = [];
+
+      const index = stock[dur].indexOf(code);
+      if (index !== -1) {
+        // Found it! Remove and save
+        stock[dur].splice(index, 1);
+        fs.writeFileSync(filePath, JSON.stringify(stock, null, 2));
+        return dur;
+      }
+    } catch (err) {
+      console.error(`Error checking codes for ${dur}:`, err);
+    }
+  }
+
+  return null;
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -35,13 +56,13 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
       .setTitle('🎁 Claim Premium Access')
-      .setDescription('Have a promotional code? Use the button below to claim premium access AND a premium account!')
+      .setDescription('Have a promotional code? Use the button below to claim premium subscription access!')
       .addFields({
         name: '✨ What do I get?',
-        value: '🌟 Premium subscription with set duration\n📦 One premium account instantly\n🎨 Premium-only features',
+        value: '🌟 Premium subscription for set duration\n📦 Access to /generate premium accounts\n🎨 Premium-only features',
         inline: false
       })
-      .setFooter({ text: 'Generator • One claim per code - Includes account + subscription!' })
+      .setFooter({ text: 'Generator • One claim per code' })
       .setTimestamp();
 
     const button = new ActionRowBuilder().addComponents(
@@ -85,43 +106,14 @@ async function handleClaimCodeModal(interaction, client) {
   }
 
   try {
-    // Check all duration tiers for the code
-    const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
-    let foundCode = null;
-    let usedDuration = null;
+    // Find and remove the code
+    const usedDuration = findAndRemoveCode(code);
 
-    // Try to find and pop the code from each duration tier
-    for (const dur of durations) {
-      const table = `codes_${dur}`;
-      const popped = popStock(dur, table);
-      
-      if (popped === code) {
-        foundCode = popped;
-        usedDuration = dur;
-        break;
-      } else if (popped) {
-        // Code wasn't found in this tier, restore it
-        const { restoreStock } = require('../database');
-        restoreStock(dur, popped, table);
-      }
-    }
-
-    if (!foundCode) {
+    if (!usedDuration) {
       return interaction.reply({ content: '❌ Invalid or already claimed promotional code.', ephemeral: true });
     }
 
-    // Now try to get an account from the premium stock
-    const accountTier = DURATION_TO_TIER[usedDuration];
-    const account = popStock(accountTier, 'stock');
-
-    if (!account) {
-      // Code was valid but no account available - restore the code
-      const { restoreStock } = require('../database');
-      restoreStock(usedDuration, foundCode, `codes_${usedDuration}`);
-      return interaction.reply({ content: '❌ Code is valid but no accounts available in stock. Try again later!', ephemeral: true });
-    }
-
-    // Grant premium access
+    // Grant premium subscription access
     let newExpires = 0;
 
     if (usedDuration === 'LIFETIME') {
@@ -151,45 +143,26 @@ async function handleClaimCodeModal(interaction, client) {
       }
     }
 
-    // Parse account like in /generate command
-    const { credentials, skinLink, username, detailLines, currencyFields } = parseAccount(account);
-    const userAvatarURL = interaction.user.displayAvatarURL({ dynamic: true, size: 256 });
-    const guildIconURL = interaction.guild?.iconURL({ dynamic: true });
-
-    // Send account details embed
-    const dmDescription = detailLines.length > 0 ? detailLines.join('\n') : '\u200b';
-
-    const dmEmbed = new EmbedBuilder()
-      .setColor(0xFEE75C)
-      .setAuthor({ name: interaction.guild?.name || 'Generator', iconURL: guildIconURL || undefined })
-      .setThumbnail(userAvatarURL)
-      .setTitle(`${DURATION_DISPLAY[usedDuration]} Premium Account`)
-      .setDescription(dmDescription)
-      .setFooter({ text: 'Generator • Do NOT share your credentials with anyone' })
-      .setTimestamp();
-
-    if (currencyFields.length > 0) dmEmbed.addFields(...currencyFields.slice(0, 3));
-    dmEmbed.addFields({ name: '🔑 Login Credentials', value: `\`\`\`${credentials}\`\`\``, inline: false });
-    if (skinLink) dmEmbed.addFields({ name: '🎨 Skin Link', value: skinLink, inline: false });
-
-    // Send account to DM
-    try {
-      await interaction.user.send({ embeds: [dmEmbed] });
-    } catch (err) {
-      console.error('Failed to send account via DM:', err);
-    }
-
     // Send success message to user
+    const expiryDate = newExpires > Math.floor(new Date(2099, 0, 1).getTime() / 1000) 
+      ? 'Never (Lifetime)' 
+      : new Date(newExpires * 1000).toLocaleString();
+
     const successEmbed = new EmbedBuilder()
       .setColor(0x57F287)
-      .setTitle('✅ Code Claimed Successfully!')
-      .setDescription(`You now have **${DURATION_DISPLAY[usedDuration]}** of premium access!`)
+      .setTitle('✅ Premium Access Granted!')
+      .setDescription(`You now have **${DURATION_DISPLAY[usedDuration]}** of premium subscription!`)
       .addFields({
-        name: '📦 What You Got',
-        value: `🌟 Premium subscription (${DURATION_DISPLAY[usedDuration]})\n📱 One premium account (sent to DMs)\n🎯 Instant access to premium features`,
+        name: '📊 Subscription Details',
+        value: `**Duration:** ${DURATION_DISPLAY[usedDuration]}\n**Expires:** ${expiryDate}`,
         inline: false
       })
-      .setFooter({ text: 'Generator • Account details sent to your DMs' })
+      .addFields({
+        name: '🎯 Next Steps',
+        value: 'Use `/generate premium` to generate premium accounts!\n\nYou now have full access to premium features and account generation.',
+        inline: false
+      })
+      .setFooter({ text: 'Generator • Enjoy your premium subscription!' })
       .setTimestamp();
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
@@ -197,66 +170,6 @@ async function handleClaimCodeModal(interaction, client) {
     console.error('Error claiming code:', err);
     return interaction.reply({ content: '❌ An error occurred while claiming your code.', ephemeral: true });
   }
-}
-
-// Account parsing function (from /generate command)
-function parseAccount(raw) {
-  if (typeof raw !== 'string') {
-    if (raw && typeof raw === 'object') {
-      raw = raw.credentials ?? raw.account ?? raw.data ?? raw.value ?? raw.text ?? JSON.stringify(raw);
-    } else {
-      raw = String(raw ?? '');
-    }
-  }
-  const parts = raw.split('|').map(p => p.trim()).filter(p => p.length > 0);
-  const credentials = parts[0] || raw.trim();
-  let skinLink = null;
-  let username = null;
-  const detailLines = [];
-  const currencyFields = [];
-
-  for (let i = 1; i < parts.length; i++) {
-    const part = parts[i];
-    if (part.startsWith('http://') || part.startsWith('https://')) {
-      skinLink = part;
-      continue;
-    }
-    if (part.includes(' / ')) {
-      const subs = part.split(' / ').map(s => s.trim()).filter(Boolean);
-      if (subs.length > 1 && subs.every(s => s.includes(':') || s.includes('➡'))) {
-        for (const sub of subs) {
-          const ai = sub.indexOf('➡');
-          const idx = ai !== -1 ? ai : sub.indexOf(':');
-          const name = sub.substring(0, idx).trim();
-          const val = sub.substring(idx + 1).trim();
-          if (val.startsWith('http://') || val.startsWith('https://')) { skinLink = val; continue; }
-          currencyFields.push({ name, value: val || '\u200b', inline: true });
-        }
-        continue;
-      }
-    }
-    let label = null, value = null;
-    const arrowIdx = part.indexOf('➡');
-    const colonIdx = part.indexOf(':');
-    if (arrowIdx !== -1) {
-      label = part.substring(0, arrowIdx).trim();
-      value = part.substring(arrowIdx + 1).trim();
-    } else if (colonIdx !== -1) {
-      label = part.substring(0, colonIdx).trim();
-      value = part.substring(colonIdx + 1).trim();
-    } else {
-      detailLines.push(part);
-      continue;
-    }
-    if (value.startsWith('http://') || value.startsWith('https://')) {
-      skinLink = value;
-      continue;
-    }
-    if (label.toLowerCase() === 'username' && !username) username = value;
-    detailLines.push(`**${label}** ➡️ ${value}`);
-  }
-
-  return { credentials, skinLink, username, detailLines, currencyFields };
 }
 
 module.exports.handleClaimCodeButton = handleClaimCodeButton;
