@@ -1,34 +1,61 @@
-const { SlashCommandBuilder, EmbedBuilder, ChannelType } = require('discord.js');
-const { setConfig } = require('../database');
-const { ownerOnly } = require('../utils');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { isOwner } = require('../utils');
+const { getConfig, setConfig } = require('../database');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setlogchannel')
-    .setDescription('Set the channel for restock announcements (owner only)')
+    .setDescription('Set the channel for code claim logs')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption(opt =>
       opt.setName('channel')
-        .setDescription('Channel for restock announcements (leave blank to disable)')
-        .addChannelTypes(ChannelType.GuildText, ChannelType.GuildAnnouncement)
-        .setRequired(false)
+        .setDescription('Channel to send code claim logs to')
+        .setRequired(true)
     ),
 
   async execute(interaction) {
-    if (!ownerOnly(interaction)) return;
-    await interaction.deferReply({ ephemeral: true });
+    if (!isOwner(interaction.user.id)) {
+      return interaction.reply({ content: '❌ Only the bot owner can use this command.', ephemeral: true });
+    }
 
-    const channel = interaction.options.getChannel('channel');
-    setConfig('log_channel', channel ? channel.id : '');
+    try {
+      const channel = interaction.options.getChannel('channel');
 
-    const embed = new EmbedBuilder()
-      .setColor(0x57F287)
-      .setTitle('✅ Restock Channel Set')
-      .setDescription(channel
-        ? `Restock announcements will be posted in <#${channel.id}> whenever you add stock.`
-        : 'Restock announcements are now disabled.')
-      .setFooter({ text: 'Generator' })
-      .setTimestamp();
+      // Validate channel is text-based
+      if (!channel?.isTextBased?.()) {
+        return interaction.reply({ content: '❌ Channel must be a text channel.', ephemeral: true });
+      }
 
-    await interaction.editReply({ embeds: [embed] });
+      // Validate bot has permission to send messages
+      if (!channel.permissionsFor(interaction.client.user)?.has('SendMessages')) {
+        return interaction.reply({ content: '❌ Bot does not have permission to send messages in that channel.', ephemeral: true });
+      }
+
+      // Save channel ID
+      setConfig('log_channel', channel.id);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle('✅ Log Channel Set')
+        .setDescription(`Code claim logs will now be sent to ${channel}`)
+        .addFields({
+          name: '📋 Details',
+          value: `**Channel:** ${channel.name}\n**Channel ID:** ${channel.id}`,
+          inline: false
+        })
+        .addFields({
+          name: '📝 What Gets Logged',
+          value: 'When someone claims a code:\n• User profile picture\n• Username\n• Subscription duration claimed\n• Timestamp',
+          inline: false
+        })
+        .setFooter({ text: 'Generator' })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    } catch (err) {
+      console.error('Error setting log channel:', err);
+      return interaction.reply({ content: '❌ Failed to set log channel.', ephemeral: true });
+    }
   }
 };
+
