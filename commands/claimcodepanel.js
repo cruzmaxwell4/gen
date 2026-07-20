@@ -55,8 +55,8 @@ module.exports = {
   async execute(interaction) {
     const embed = new EmbedBuilder()
       .setColor(0x5865F2)
-      .setTitle('🎁 Claim Premium Access')
-      .setDescription('Have a promotional code? Use the button below to claim premium subscription access!')
+      .setTitle('🎁 Claim your prem gen here!')
+      .setDescription('Have a promotional code? Use the button below to unlock premium access!')
       .addFields({
         name: '✨ What do I get?',
         value: '🌟 Premium subscription for set duration\n📦 Access to /generate premium accounts\n🎨 Premium-only features',
@@ -64,6 +64,14 @@ module.exports = {
       })
       .setFooter({ text: 'Generator • One claim per code' })
       .setTimestamp();
+
+    // Try to load custom image if set
+    const panelImage = getConfig('panel_image');
+    if (panelImage) {
+      if (panelImage.startsWith('http://') || panelImage.startsWith('https://')) {
+        embed.setImage(panelImage);
+      }
+    }
 
     const button = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
