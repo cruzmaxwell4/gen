@@ -55,7 +55,7 @@ try {
 let inviteCache = new Map();
 let dropInterval = null;
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   try {
     console.log(`✅ Logged in as ${client.user?.tag || 'unknown'}`);
 
