@@ -230,13 +230,13 @@ module.exports = {
     }
   },
   
-  popStock(category) {
+  popStock(category, table = 'stock') {
     try {
       if (!category) return null;
-      const stock = loadStock('stock');
+      const stock = loadStock(table);
       if (!Array.isArray(stock[category]) || stock[category].length === 0) return null;
       const item = stock[category].shift();
-      saveStock('stock', stock);
+      saveStock(table, stock);
       return item;
     } catch (err) {
       console.error(`⚠️ Error popping stock for ${category}:`, err?.message || err);
@@ -244,30 +244,30 @@ module.exports = {
     }
   },
   
-  restoreStock(category, item) {
+  restoreStock(category, item, table = 'stock') {
     try {
       if (!category || !item) return;
-      const stock = loadStock('stock');
+      const stock = loadStock(table);
       if (!stock[category]) stock[category] = [];
       if (!Array.isArray(stock[category])) stock[category] = [];
       stock[category].unshift(item);
-      saveStock('stock', stock);
+      saveStock(table, stock);
     } catch (err) {
       console.error(`⚠️ Error restoring stock for ${category}:`, err?.message || err);
     }
   },
   
-  clearStock(category) {
+  clearStock(category, table = 'stock') {
     try {
-      const stock = loadStock('stock');
+      const stock = loadStock(table);
       if (category) {
         const count = Array.isArray(stock[category]) ? stock[category].length : 0;
         stock[category] = [];
-        saveStock('stock', stock);
+        saveStock(table, stock);
         return count;
       }
       const count = Object.values(stock).reduce((s, a) => s + (Array.isArray(a) ? a.length : 0), 0);
-      saveStock('stock', {});
+      saveStock(table, {});
       return count;
     } catch (err) {
       console.error('⚠️ Error clearing stock:', err?.message || err);

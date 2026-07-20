@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { isOwner } = require('../utils');
-const { getConfig, setConfig } = require('../database');
+const { clearStock } = require('../database');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -14,15 +14,23 @@ module.exports = {
     }
 
     try {
-      const allCodes = JSON.parse(getConfig('promo_codes', '[]'));
-      const count = allCodes.length;
+      const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
+      let totalCleared = 0;
 
-      setConfig('promo_codes', JSON.stringify([]));
+      for (const dur of durations) {
+        const count = clearStock(`codes_${dur}`, `codes_${dur}`);
+        totalCleared += count;
+      }
 
       const embed = new EmbedBuilder()
         .setColor(0xED4245)
-        .setTitle('🗑️ Codes Cleared')
-        .setDescription(`Cleared **${count}** promotional code(s)`)
+        .setTitle('🗑️ All Codes Cleared')
+        .setDescription(`Cleared **${totalCleared}** promotional code(s) across all tiers`)
+        .addFields({
+          name: '📊 Breakdown',
+          value: durations.map(d => `**${d}**: Cleared`).join('\n'),
+          inline: false
+        })
         .setFooter({ text: 'Generator' })
         .setTimestamp();
 
