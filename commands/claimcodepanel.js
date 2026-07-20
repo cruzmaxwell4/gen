@@ -174,6 +174,43 @@ async function handleClaimCodeModal(interaction, client) {
       .setTimestamp();
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
+
+    // Send log message to log channel if configured
+    const logChannelId = getConfig('log_channel');
+    if (logChannelId && client) {
+      try {
+        const logChannel = await client.channels.fetch(logChannelId);
+        
+        if (logChannel?.isTextBased?.()) {
+          const logEmbed = new EmbedBuilder()
+            .setColor(0xFEE75C)
+            .setTitle('🎁 Code Claimed')
+            .setDescription(`${interaction.user} claimed a premium code!`)
+            .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true, size: 256 }))
+            .addFields({
+              name: '👤 User',
+              value: `${interaction.user.username}#${interaction.user.discriminator}`,
+              inline: true
+            })
+            .addFields({
+              name: '📅 Duration',
+              value: DURATION_DISPLAY[usedDuration],
+              inline: true
+            })
+            .addFields({
+              name: '⏰ Claimed At',
+              value: new Date().toLocaleString(),
+              inline: false
+            })
+            .setFooter({ text: 'Generator • Code Claim Logs' })
+            .setTimestamp();
+
+          await logChannel.send({ embeds: [logEmbed] });
+        }
+      } catch (err) {
+        console.error('⚠️ Failed to send log message:', err?.message || err);
+      }
+    }
   } catch (err) {
     console.error('Error claiming code:', err);
     return interaction.reply({ content: '❌ An error occurred while claiming your code.', ephemeral: true });
