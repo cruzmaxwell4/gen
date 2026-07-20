@@ -5,7 +5,7 @@ const { addStockBulk } = require('../database');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('addcodes')
-    .setDescription('Create promotional codes for premium access')
+    .setDescription('Create promotional codes from a file')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(opt =>
       opt.setName('duration')
@@ -19,12 +19,10 @@ module.exports = {
           { name: '♾️ Lifetime', value: 'LIFETIME' }
         )
     )
-    .addIntegerOption(opt =>
-      opt.setName('amount')
-        .setDescription('How many codes to generate')
+    .addAttachmentOption(opt =>
+      opt.setName('file')
+        .setDescription('Text file with codes (one per line)')
         .setRequired(true)
-        .setMinValue(1)
-        .setMaxValue(50)
     ),
 
   async execute(interaction) {
@@ -33,45 +31,67 @@ module.exports = {
     }
 
     const duration = interaction.options.getString('duration');
-    const amount = interaction.options.getInteger('amount');
+    const attachment = interaction.options.getAttachment('file');
 
-    // Generate codes
-    const codes = [];
-    for (let i = 0; i < amount; i++) {
-      const code = `PREM${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      codes.push(code);
+    // Validate file type
+    if (!attachment.name.endsWith('.txt')) {
+      return interaction.reply({ content: '❌ Please upload a `.txt` file.', ephemeral: true });
     }
 
-    // Store codes in stock like account stock (codes_TABLE.json)
-    const added = addStockBulk(`codes_${duration}`, codes, `codes_${duration}`);
-
-    if (added === 0) {
-      return interaction.reply({ content: '❌ Failed to save codes.', ephemeral: true });
+    // Validate file size (max 10MB to be safe)
+    if (attachment.size > 10 * 1024 * 1024) {
+      return interaction.reply({ content: '❌ File is too large. Max 10MB.', ephemeral: true });
     }
 
-    // Display codes in embed (one per line for easy copy)
-    const codeList = codes.map(c => `\`${c}\``).join('\n');
-    const durationLabel = {
-      '1DAY': '⏳ 1 Day',
-      '3DAY': '📅 3 Days',
-      '1WEEK': '📆 1 Week',
-      '1MONTH': '📊 1 Month',
-      'LIFETIME': '♾️ Lifetime'
-    }[duration];
+    await interaction.deferReply({ ephemeral: true });
 
-    const embed = new EmbedBuilder()
-      .setColor(0xFEE75C)
-      .setTitle('✅ Promotional Codes Created')
-      .setDescription(`Generated **${added}** code(s) with duration: **${durationLabel}**`)
-      .addFields({
-        name: '📋 Codes',
-        value: codeList,
-        inline: false
-      })
-      .setFooter({ text: 'Generator • Share these codes with your community!' })
-      .setTimestamp();
+    try {
+      // Download file content
+      const response = await fetch(attachment.url);
+      const text = await response.text();
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+      // Parse codes (one per line, trim whitespace)
+      const codes = text
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      if (codes.length === 0) {
+        return interaction.editReply({ content: '❌ No valid codes found in the file.' });
+      }
+
+      // Store codes in stock
+      const added = addStockBulk(`codes_${duration}`, codes, `codes_${duration}`);
+
+      if (added === 0) {
+        return interaction.editReply({ content: '❌ Failed to save codes.' });
+      }
+
+      const durationLabel = {
+        '1DAY': '⏳ 1 Day',
+        '3DAY': '📅 3 Days',
+        '1WEEK': '📆 1 Week',
+        '1MONTH': '📊 1 Month',
+        'LIFETIME': '♾️ Lifetime'
+      }[duration];
+
+      const embed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle('✅ Codes Added Successfully')
+        .setDescription(`Added **${added}** code(s) to **${durationLabel}** tier`)
+        .addFields({
+          name: '📊 Details',
+          value: `**File:** ${attachment.name}\n**Duration:** ${durationLabel}\n**Codes Imported:** ${added}`,
+          inline: false
+        })
+        .setFooter({ text: 'Generator • Codes are ready to claim!' })
+        .setTimestamp();
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (err) {
+      console.error('Error processing codes file:', err);
+      return interaction.editReply({ content: '❌ Failed to process the file. Make sure it\'s a valid text file.' });
+    }
   }
 };
 
