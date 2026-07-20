@@ -158,8 +158,7 @@ module.exports = {
       return interaction.editReply({ embeds: [embed] });
     }
 
-    // Open the DM with a processing message FIRST — if their DMs are closed we
-    // bail out here WITHOUT burning a stock account or the cooldown.
+    // Open the DM with the account IMMEDIATELY — no processing cascade
     let statusMsg;
     try {
       statusMsg = await interaction.user.send({ content: '⌛ **Processing account...** Fetching details...' });
@@ -294,12 +293,7 @@ module.exports = {
       channelPayload.files = [new AttachmentBuilder(bannerFile.path, { name: bannerFile.name })];
     }
 
-    // Play the "processing" cascade in the DM, then deliver the account embed
-    await wait(1300);
-    await statusMsg.edit({ content: '⌛ **Adding account to API...** This may take 30-60 seconds...' }).catch(() => {});
-    await wait(10000);
-    await statusMsg.edit({ content: '✅ **Account ready!** Here are your details below 👇' }).catch(() => {});
-
+    // Deliver account immediately - no "waiting on prem gen" cascade
     let delivered = true;
     try {
       await interaction.user.send(dmPayload);
@@ -308,6 +302,8 @@ module.exports = {
     }
 
     if (delivered) {
+      // Delete the processing message and send the account embed
+      await statusMsg.delete().catch(() => {});
       await interaction.editReply(channelPayload);
     } else {
       // Delivery failed after we popped the account — put it back & refund the cooldown
@@ -323,3 +319,4 @@ module.exports = {
     }
   }
 };
+
