@@ -60,8 +60,9 @@ module.exports = {
         return interaction.editReply({ content: '❌ No valid codes found in the file.' });
       }
 
-      // Store codes in stock
-      const added = addStockBulk(`codes_${duration}`, codes, `codes_${duration}`);
+      // Store codes in stock - category is duration, table is codes_DURATION
+      const table = `codes_${duration}`;
+      const added = addStockBulk(duration, codes, table);
 
       if (added === 0) {
         return interaction.editReply({ content: '❌ Failed to save codes.' });
