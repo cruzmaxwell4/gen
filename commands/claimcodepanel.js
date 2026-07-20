@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { popStock, getUser, updateUser, getConfig } = require('../database');
+const { popStock, getUser, updateUser, getConfig, stockCount } = require('../database');
+const fs = require('fs');
+const path = require('path');
 
 // Duration in seconds
 const DURATION_SECONDS = {
@@ -25,6 +27,34 @@ const DURATION_TO_TIER = {
   '1MONTH': 'premium',
   'LIFETIME': 'premium'
 };
+
+// Helper to find and remove a code from stock
+function findAndRemoveCode(code) {
+  const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
+  const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+
+  for (const dur of durations) {
+    const filePath = path.join(dataDir, `codes_${dur}.json`);
+    try {
+      if (!fs.existsSync(filePath)) continue;
+
+      let stock = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      if (!stock[dur]) stock[dur] = [];
+
+      const index = stock[dur].indexOf(code);
+      if (index !== -1) {
+        // Found it! Remove and save
+        stock[dur].splice(index, 1);
+        fs.writeFileSync(filePath, JSON.stringify(stock, null, 2));
+        return dur;
+      }
+    } catch (err) {
+      console.error(`Error checking codes for ${dur}:`, err);
+    }
+  }
+
+  return null;
+}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -85,28 +115,10 @@ async function handleClaimCodeModal(interaction, client) {
   }
 
   try {
-    // Check all duration tiers for the code
-    const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
-    let foundCode = null;
-    let usedDuration = null;
+    // Find and remove the code
+    const usedDuration = findAndRemoveCode(code);
 
-    // Try to find and pop the code from each duration tier
-    for (const dur of durations) {
-      const table = `codes_${dur}`;
-      const popped = popStock(dur, table);
-      
-      if (popped === code) {
-        foundCode = popped;
-        usedDuration = dur;
-        break;
-      } else if (popped) {
-        // Code wasn't found in this tier, restore it
-        const { restoreStock } = require('../database');
-        restoreStock(dur, popped, table);
-      }
-    }
-
-    if (!foundCode) {
+    if (!usedDuration) {
       return interaction.reply({ content: '❌ Invalid or already claimed promotional code.', ephemeral: true });
     }
 
@@ -115,9 +127,6 @@ async function handleClaimCodeModal(interaction, client) {
     const account = popStock(accountTier, 'stock');
 
     if (!account) {
-      // Code was valid but no account available - restore the code
-      const { restoreStock } = require('../database');
-      restoreStock(usedDuration, foundCode, `codes_${usedDuration}`);
       return interaction.reply({ content: '❌ Code is valid but no accounts available in stock. Try again later!', ephemeral: true });
     }
 
