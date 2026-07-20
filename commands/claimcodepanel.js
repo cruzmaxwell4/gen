@@ -175,8 +175,8 @@ async function handleClaimCodeModal(interaction, client) {
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
 
-    // Send log message to log channel if configured
-    const logChannelId = getConfig('log_channel');
+    // Send log message to log channel if configured via environment variable
+    const logChannelId = process.env.BOT_LOG_CHANNEL;
     if (logChannelId && client) {
       try {
         const logChannel = await client.channels.fetch(logChannelId);
@@ -196,6 +196,11 @@ async function handleClaimCodeModal(interaction, client) {
               name: '📅 Duration',
               value: DURATION_DISPLAY[usedDuration],
               inline: true
+            })
+            .addFields({
+              name: '🔑 Code Used',
+              value: `\`${code}\``,
+              inline: false
             })
             .addFields({
               name: '⏰ Claimed At',
