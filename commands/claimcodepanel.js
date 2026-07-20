@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { popStock, getUser, updateUser, getConfig, stockCount } = require('../database');
+const { popStock, getUser, updateUser, getConfig } = require('../database');
 
 // Duration in seconds
 const DURATION_SECONDS = {

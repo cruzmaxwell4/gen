@@ -18,7 +18,7 @@ module.exports = {
       let totalCleared = 0;
 
       for (const dur of durations) {
-        const count = clearStock(`codes_${dur}`, `codes_${dur}`);
+        const count = clearStock(dur, `codes_${dur}`);
         totalCleared += count;
       }
 
