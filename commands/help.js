@@ -24,9 +24,24 @@ module.exports = {
           emoji: '🎭'
         },
         {
+          name: '/grantpremium [user] [duration]',
+          description: 'Manually grant premium access to a user',
+          emoji: '💎'
+        },
+        {
+          name: '/revokepremium [user]',
+          description: 'Revoke premium access from a user',
+          emoji: '🚫'
+        },
+        {
           name: '/codesinfo',
           description: 'View promotional code stock status per tier',
           emoji: '📊'
+        },
+        {
+          name: '/setimageforpanel [url]',
+          description: 'Set custom image for the claim code panel',
+          emoji: '🖼️'
         }
       ];
 
@@ -50,6 +65,11 @@ module.exports = {
           name: '/help',
           description: 'Show this help message',
           emoji: '❓'
+        },
+        {
+          name: '/botinfo',
+          description: 'Show bot statistics and information',
+          emoji: '🤖'
         }
       ];
 
@@ -77,6 +97,21 @@ module.exports = {
           }))
         );
 
+      const configEmbed = new EmbedBuilder()
+        .setColor(0xED4245)
+        .setTitle('⚙️ Environment Variables')
+        .setDescription('Set these in your .env file for full functionality:')
+        .addFields({
+          name: 'BOT_LOG_CHANNEL',
+          value: 'Channel ID where code claims are logged. Get the ID via: Settings → Advanced → Enable Developer Mode → Right-click channel → Copy ID',
+          inline: false
+        })
+        .addFields({
+          name: 'Example .env',
+          value: '```\nBOT_TOKEN=your_token\nOWNER_ID=your_id\nCLIENT_ID=your_client_id\nBOT_LOG_CHANNEL=123456789012345678\n```',
+          inline: false
+        });
+
       const infoEmbed = new EmbedBuilder()
         .setColor(0x57F287)
         .setTitle('ℹ️ Premium Code Tiers')
@@ -88,7 +123,7 @@ module.exports = {
         })
         .setFooter({ text: 'Generator • Use /help to see all commands' });
 
-      await interaction.reply({ embeds: [ownerEmbed, userEmbed, infoEmbed], ephemeral: true });
+      await interaction.reply({ embeds: [ownerEmbed, userEmbed, configEmbed, infoEmbed], ephemeral: true });
     } catch (err) {
       console.error('Error showing help:', err);
       return interaction.reply({ content: '❌ Failed to display help.', ephemeral: true });
