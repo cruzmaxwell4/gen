@@ -279,6 +279,9 @@ client.on('interactionCreate', async (interaction) => {
             return;
           }
           await interaction.reply({ content: `📋 **Tap and hold (or triple-click) to copy:**\n\`\`\`${creds}\`\`\``, ephemeral: true }).catch(() => {});
+        } else if (id === 'claim_code_btn') {
+          const { handleClaimCodeButton } = require('./commands/claimcodepanel');
+          await handleClaimCodeButton(interaction, client);
         } else if (id === 'how_to_link') {
           const embed = new EmbedBuilder()
             .setColor(0x5865F2)
@@ -297,6 +300,22 @@ client.on('interactionCreate', async (interaction) => {
         }
       } catch (err) {
         console.error('⚠️ Button handler error:', err?.message || err);
+      }
+      return;
+    }
+
+    
+    // Modals
+    if (interaction.isModalSubmit?.()) {
+      try {
+        const customId = interaction.customId;
+        if (customId === 'claim_code_modal') {
+          const { handleClaimCodeModal } = require('./commands/claimcodepanel');
+          await handleClaimCodeModal(interaction, client);
+          return;
+        }
+      } catch (err) {
+        console.error('⚠️ Modal handler error:', err?.message || err);
       }
       return;
     }
