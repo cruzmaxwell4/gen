@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { getConfig, setConfig, getUser, updateUser } = require('../database');
+const { popStock, getUser, updateUser, getConfig, stockCount } = require('../database');
 
 // Duration in seconds
 const DURATION_SECONDS = {
@@ -7,6 +7,14 @@ const DURATION_SECONDS = {
   '3DAY': 259200,     // 3 days
   '1WEEK': 604800,    // 1 week
   '1MONTH': 2592000   // ~30 days
+};
+
+const DURATION_DISPLAY = {
+  '1DAY': '1️⃣ Day',
+  '3DAY': '3️⃣ Days',
+  '1WEEK': '📆 Week',
+  '1MONTH': '📅 Month',
+  'LIFETIME': '♾️ Lifetime'
 };
 
 module.exports = {
@@ -68,34 +76,40 @@ async function handleClaimCodeModal(interaction, client) {
   }
 
   try {
-    // Load all codes
-    const allCodes = JSON.parse(getConfig('promo_codes', '[]'));
-    const codeObj = allCodes.find(c => c.code === code);
+    // Check all duration tiers for the code
+    const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
+    let foundCode = null;
+    let usedDuration = null;
 
-    if (!codeObj) {
-      return interaction.reply({ content: '❌ Invalid promotional code.', ephemeral: true });
+    // Try to find and pop the code from each duration tier
+    for (const dur of durations) {
+      const table = `codes_${dur}`;
+      const popped = popStock(dur, table);
+      
+      if (popped === code) {
+        foundCode = popped;
+        usedDuration = dur;
+        break;
+      } else if (popped) {
+        // Code wasn't found in this tier, restore it
+        const { restoreStock } = require('../database');
+        restoreStock(dur, popped, table);
+      }
     }
 
-    if (codeObj.used) {
-      return interaction.reply({ content: '❌ This code has already been claimed.', ephemeral: true });
+    if (!foundCode) {
+      return interaction.reply({ content: '❌ Invalid or already claimed promotional code.', ephemeral: true });
     }
-
-    // Mark code as used
-    codeObj.used = true;
-    codeObj.used_by = interaction.user.id;
-    codeObj.used_at = Math.floor(Date.now() / 1000);
-    setConfig('promo_codes', JSON.stringify(allCodes));
 
     // Grant premium access
-    const user = getUser(interaction.user.id);
     let newExpires = 0;
 
-    if (codeObj.duration === 'LIFETIME') {
+    if (usedDuration === 'LIFETIME') {
       // Set to year 2100 (never expires in practice)
       newExpires = Math.floor(new Date(2100, 0, 1).getTime() / 1000);
     } else {
       // Add duration seconds to now
-      const durationSeconds = DURATION_SECONDS[codeObj.duration] || 86400;
+      const durationSeconds = DURATION_SECONDS[usedDuration] || 86400;
       newExpires = Math.floor(Date.now() / 1000) + durationSeconds;
     }
 
@@ -118,18 +132,10 @@ async function handleClaimCodeModal(interaction, client) {
     }
 
     // Send success message
-    const durationLabel = {
-      '1DAY': '1️⃣ Day',
-      '3DAY': '3️⃣ Days',
-      '1WEEK': '📆 Week',
-      '1MONTH': '📅 Month',
-      'LIFETIME': '♾️ Lifetime'
-    }[codeObj.duration];
-
     const successEmbed = new EmbedBuilder()
       .setColor(0x57F287)
       .setTitle('✅ Premium Access Granted!')
-      .setDescription(`You now have **${durationLabel}** of premium access!`)
+      .setDescription(`You now have **${DURATION_DISPLAY[usedDuration]}** of premium access!`)
       .addFields({
         name: '📦 Benefits',
         value: '🌟 Generate premium accounts\n📊 Access premium stock\n⚡ Priority support',
