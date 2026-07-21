@@ -98,8 +98,46 @@ module.exports = {
       return interaction.deferReply().catch(() => {});
     }
 
-    // No channel restrictions - users can generate in ANY channel
-    // (gen_channel config is ignored, allowing generation everywhere)
+    // Check channel restrictions based on gen_channel_tiers mode
+    const genChannelMode = getConfig('gen_channel_tiers', 'all');
+    
+    if (genChannelMode !== 'all') {
+      let allowedChannelId = null;
+      const tierLabels = { free: '🌊 Free', 'free+': '🌊 Free+', premium: '⭐ Premium' };
+
+      if (genChannelMode === 'custom') {
+        // Custom mode: check specific tier channels
+        if (category === 'free') {
+          allowedChannelId = getConfig('free_channel', '');
+        } else if (category === 'free+') {
+          allowedChannelId = getConfig('freeplus_channel', '');
+        } else if (category === 'premium') {
+          allowedChannelId = getConfig('premium_channel', '');
+        }
+      } else if (genChannelMode === 'free_only' && category === 'free') {
+        allowedChannelId = getConfig('free_channel', '');
+      } else if (genChannelMode === 'freeplus_only' && category === 'free+') {
+        allowedChannelId = getConfig('freeplus_channel', '');
+      } else if (genChannelMode === 'premium_only' && category === 'premium') {
+        allowedChannelId = getConfig('premium_channel', '');
+      }
+
+      // If a channel is required but not set, or user is in wrong channel
+      if (allowedChannelId && interaction.channelId !== allowedChannelId) {
+        return interaction.reply({ content: `❌ You can only generate **${tierLabels[category]}** accounts in <#${allowedChannelId}>`, ephemeral: true });
+      }
+
+      // Single tier modes - only that tier allowed
+      if (genChannelMode === 'free_only' && category !== 'free') {
+        return interaction.reply({ content: `❌ Only **${tierLabels['free']}** accounts can be generated in this server!`, ephemeral: true });
+      }
+      if (genChannelMode === 'freeplus_only' && category !== 'free+') {
+        return interaction.reply({ content: `❌ Only **${tierLabels['free+']}** accounts can be generated in this server!`, ephemeral: true });
+      }
+      if (genChannelMode === 'premium_only' && category !== 'premium') {
+        return interaction.reply({ content: `❌ Only **${tierLabels['premium']}** accounts can be generated in this server!`, ephemeral: true });
+      }
+    }
 
     if (!hasGenerateAccess(interaction.member, category)) {
       const roleId = getConfig(`role_${category.replace('+', 'plus')}`);
