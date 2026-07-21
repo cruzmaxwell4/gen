@@ -1,77 +1,61 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { setConfig, getConfig } = require('../database');
-const { ownerOnly } = require('../utils');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { isOwner } = require('../utils');
+const { setConfig } = require('../database');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('setchannel')
-    .setDescription('Set channel tier restrictions for /generate (owner only)')
-    .addStringOption(opt =>
-      opt.setName('tier')
-        .setDescription('Which tier can ONLY use /generate in this channel')
-        .setRequired(true)
-        .addChoices(
-          { name: '🌊 Free Only', value: 'free' },
-          { name: '🌊 Free+ Only', value: 'free+' },
-          { name: '🌟 Premium Only', value: 'premium' }
-        )
-    )
+    .setDescription('Set the channel for code claim logs')
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addChannelOption(opt =>
       opt.setName('channel')
-        .setDescription('Channel to restrict (leave blank = all channels)')
-        .setRequired(false)
+        .setDescription('Channel to send code claim logs to')
+        .setRequired(true)
     ),
 
   async execute(interaction) {
-    if (!ownerOnly(interaction)) return;
-    await interaction.deferReply({ ephemeral: true });
-
-    const tier = interaction.options.getString('tier');
-    const channel = interaction.options.getChannel('channel');
-
-    // Save tier restriction
-    setConfig('gen_channel_tier', tier);
-    
-    // Save channel ID
-    setConfig('gen_channel', channel ? channel.id : '');
-
-    const tierEmoji = {
-      free: '🌊',
-      'free+': '🌊',
-      premium: '🌟'
-    }[tier];
-
-    const tierLabel = {
-      free: 'Free',
-      'free+': 'Free+',
-      premium: 'Premium'
-    }[tier];
-
-    let description = '';
-
-    if (!channel) {
-      description = `✅ **Only ${tierEmoji} ${tierLabel} can use /generate (all channels)**`;
-    } else {
-      description = `✅ **Only ${tierEmoji} ${tierLabel} can use /generate in <#${channel.id}>**`;
+    if (!isOwner(interaction.user.id)) {
+      return interaction.reply({ content: '❌ Only the bot owner can use this command.', ephemeral: true });
     }
 
-    description += '\n\n**Access:**\n';
-    
-    if (tier === 'free') {
-      description += '🌊 Free ✅\n🌊 Free+ ❌\n🌟 Premium ❌';
-    } else if (tier === 'free+') {
-      description += '🌊 Free ❌\n🌊 Free+ ✅\n🌟 Premium ❌';
-    } else if (tier === 'premium') {
-      description += '🌊 Free ❌\n🌊 Free+ ❌\n🌟 Premium ✅';
+    try {
+      const channel = interaction.options.getChannel('channel');
+
+      // Validate channel is text-based
+      if (!channel?.isTextBased?.()) {
+        return interaction.reply({ content: '❌ Channel must be a text channel.', ephemeral: true });
+      }
+
+      // Validate bot has permission to send messages
+      if (!channel.permissionsFor(interaction.client.user)?.has('SendMessages')) {
+        return interaction.reply({ content: '❌ Bot does not have permission to send messages in that channel.', ephemeral: true });
+      }
+
+      // Save channel ID to config
+      setConfig('log_channel', channel.id);
+
+      const embed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle('✅ Log Channel Set')
+        .setDescription(`Code claim logs will now be sent to ${channel}`)
+        .addFields({
+          name: '📋 Details',
+          value: `**Channel:** ${channel.name}\n**Channel ID:** ${channel.id}`,
+          inline: false
+        })
+        .addFields({
+          name: '📝 What Gets Logged',
+          value: 'When someone claims a code:\n• User profile picture\n• Username\n• Subscription duration claimed\n• Code used\n• Timestamp',
+          inline: false
+        })
+        .setFooter({ text: 'Generator' })
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed], ephemeral: true });
+    } catch (err) {
+      console.error('Error setting log channel:', err);
+      return interaction.reply({ content: '❌ Failed to set log channel.', ephemeral: true });
     }
-
-    const embed = new EmbedBuilder()
-      .setColor(0x57F287)
-      .setTitle('✅ Channel Tier Restriction Set')
-      .setDescription(description)
-      .setTimestamp();
-
-    await interaction.editReply({ embeds: [embed] });
   }
 };
 

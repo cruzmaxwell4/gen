@@ -198,6 +198,11 @@ async function handleClaimCodeModal(interaction, client) {
               inline: true
             })
             .addFields({
+              name: '🔑 Code Used',
+              value: `\`${code}\``,
+              inline: false
+            })
+            .addFields({
               name: '⏰ Claimed At',
               value: new Date().toLocaleString(),
               inline: false

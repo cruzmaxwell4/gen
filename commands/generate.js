@@ -98,26 +98,8 @@ module.exports = {
       return interaction.deferReply().catch(() => {});
     }
 
-    const genChannelId = getConfig('gen_channel');
-    if (genChannelId && interaction.channelId !== genChannelId) {
-      return interaction.reply({ content: `❌ Head to <#${genChannelId}> to generate accounts.`, ephemeral: true });
-    }
-
-    // Check channel tier restriction (only if a specific tier is required)
-    const genChannelTier = getConfig('gen_channel_tier', '');
-    if (genChannelTier && genChannelTier !== 'all') {
-      const allowedTiers = genChannelTier.split(',').map(t => t.trim());
-      if (!allowedTiers.includes(category)) {
-        const tierLabels = { free: '🌊 Free', 'free+': '🌊 Free+', premium: '🌟 Premium' };
-        const allowed = allowedTiers.map(t => tierLabels[t]).join(', ');
-        const embed = new EmbedBuilder()
-          .setColor(0xED4245)
-          .setTitle('❌ Tier Not Allowed')
-          .setDescription(`This channel only allows: **${allowed}**\n\nYou tried to generate **${tierLabels[category]}**.`)
-          .setTimestamp();
-        return interaction.reply({ embeds: [embed], ephemeral: true });
-      }
-    }
+    // No channel restrictions - users can generate in ANY channel
+    // (gen_channel config is ignored, allowing generation everywhere)
 
     if (!hasGenerateAccess(interaction.member, category)) {
       const roleId = getConfig(`role_${category.replace('+', 'plus')}`);
@@ -323,3 +305,4 @@ module.exports = {
     }
   }
 };
+
