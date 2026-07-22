@@ -25,6 +25,9 @@ module.exports = {
         .setDescription('Subscription duration')
         .setRequired(true)
         .addChoices(
+          { name: '10 Seconds', value: '10' },
+          { name: '30 Seconds', value: '30' },
+          { name: '1 Minute',   value: '60' },
           { name: '30 Minutes', value: '1800' },
           { name: '1 Hour',     value: '3600' },
           { name: '3 Hours',    value: '10800' },
@@ -110,6 +113,9 @@ module.exports = {
 
       // Format duration display
       const durationLabel = {
+        '10': '10 Seconds',
+        '30': '30 Seconds',
+        '60': '1 Minute',
         '1800': '30 Minutes',
         '3600': '1 Hour',
         '10800': '3 Hours',
