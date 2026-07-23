@@ -59,17 +59,14 @@ client.once('clientReady', async () => {
   try {
     console.log(`✅ Logged in as ${client.user?.tag || 'unknown'}`);
 
-    // Register commands with error handling
     try {
       await registerCommands();
     } catch (err) {
       console.error('⚠️ Failed to register commands:', err?.message || err);
     }
 
-    // Apply presence with error handling
     applyPresence(client);
 
-    // Cache invites safely
     try {
       for (const [, guild] of client.guilds.cache) {
         try {
@@ -78,14 +75,13 @@ client.once('clientReady', async () => {
             inviteCache.set(guild.id, new Map(invites.map(i => [i.code, i.uses])));
           }
         } catch (err) {
-          // Silent fail - invite caching not critical
+          // Silent fail
         }
       }
     } catch (err) {
       console.error('⚠️ Error caching invites:', err?.message || err);
     }
 
-    // Start drop system if enabled
     try {
       const dropActive = getDropConfig('active', 'false') === 'true';
       if (dropActive) startDrop(client);
@@ -93,7 +89,6 @@ client.once('clientReady', async () => {
       console.error('⚠️ Error checking drop config:', err?.message || err);
     }
 
-    // Start subscription expiration sweep
     try {
       await sweepExpiredSubs(client);
       setInterval(() => sweepExpiredSubs(client).catch(err => {
@@ -125,7 +120,6 @@ client.on('guildCreate', async (guild) => {
   }
 });
 
-// Presence configuration
 const ACTIVITY_TYPES = {
   playing: ActivityType.Playing,
   watching: ActivityType.Watching,
@@ -136,7 +130,7 @@ const ACTIVITY_TYPES = {
 function applyPresence(client) {
   try {
     if (!client?.user) return;
-    const text = String(getConfig('status_text', 'Generator | /generate') || 'Generator').slice(0, 128);
+    const text = String(getConfig('status_text', 'Code & Claim Bot') || 'Code & Claim Bot').slice(0, 128);
     const typeKey = String(getConfig('status_type', 'playing') || 'playing').toLowerCase();
     const type = ACTIVITY_TYPES[typeKey] ?? ActivityType.Playing;
     try {
@@ -151,7 +145,6 @@ function applyPresence(client) {
 
 client.applyPresence = applyPresence;
 
-// Subscription expiration
 const SUB_ROLE_KEYS = { free: 'role_free', 'free+': 'role_freeplus', premium: 'role_premium' };
 
 async function sweepExpiredSubs(client) {
@@ -170,15 +163,14 @@ async function sweepExpiredSubs(client) {
     for (const u of users) {
       try {
         if (!u?.id || !u?.subscription || u.subscription === 'none') continue;
-        if (!u.sub_expires || u.sub_expires === 0) continue; // permanent
-        if (u.sub_expires > now) continue; // still active
+        if (!u.sub_expires || u.sub_expires === 0) continue;
+        if (u.sub_expires > now) continue;
 
         const roleId = getConfig(SUB_ROLE_KEYS[u.subscription]);
         updateUser(u.id, { subscription: 'none', sub_expires: 0 });
 
         if (!roleId) continue;
 
-        // Remove role from all guilds
         for (const [, guild] of client.guilds.cache) {
           try {
             const member = await guild.members.fetch(u.id).catch(() => null);
@@ -188,7 +180,7 @@ async function sweepExpiredSubs(client) {
               });
             }
           } catch (err) {
-            // Silent fail for individual guild role removal
+            // Silent fail
           }
         }
       } catch (err) {
@@ -200,7 +192,6 @@ async function sweepExpiredSubs(client) {
   }
 }
 
-// Guild member add - invite tracking
 client.on('guildMemberAdd', async (member) => {
   try {
     if (!member?.guild) return;
@@ -233,22 +224,19 @@ client.on('guildMemberAdd', async (member) => {
   }
 });
 
-// Message create - stat tracking
 client.on('messageCreate', async (msg) => {
   try {
     if (msg?.author?.bot || !msg?.guild) return;
     incrementUserField(msg.author.id, 'messages');
   } catch (err) {
-    // Silent fail - stat tracking not critical
+    // Silent fail
   }
 });
 
-// Interaction handling
 client.on('interactionCreate', async (interaction) => {
   try {
     if (!interaction) return;
 
-    // Autocomplete
     if (interaction.isAutocomplete?.()) {
       try {
         const command = client.commands.get(interaction.commandName);
@@ -263,7 +251,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // Buttons
     if (interaction.isButton?.()) {
       try {
         const id = interaction.customId;
@@ -280,8 +267,19 @@ client.on('interactionCreate', async (interaction) => {
           }
           await interaction.reply({ content: `📋 **Tap and hold (or triple-click) to copy:**\n\`\`\`${creds}\`\`\``, ephemeral: true }).catch(() => {});
         } else if (id === 'claim_code_btn') {
-          const { handleClaimCodeButton } = require('./commands/claimcodepanel');
-          await handleClaimCodeButton(interaction, client);
+          try {
+            const { handleClaimCodeButton } = require('./commands/claimcodepanel');
+            await handleClaimCodeButton(interaction, client);
+          } catch (err) {
+            console.error('⚠️ Error in premium claim button:', err?.message || err);
+          }
+        } else if (id === 'claim_code_btn_free') {
+          try {
+            const { handleClaimCodeButtonFree } = require('./commands/claimpanelfree');
+            await handleClaimCodeButtonFree(interaction, client);
+          } catch (err) {
+            console.error('⚠️ Error in free claim button:', err?.message || err);
+          }
         } else if (id === 'how_to_link') {
           const embed = new EmbedBuilder()
             .setColor(0x5865F2)
@@ -294,7 +292,7 @@ client.on('interactionCreate', async (interaction) => {
               '',
               '⚠️ Only change the password if the account notes confirm it is safe.'
             ].join('\n'))
-            .setFooter({ text: 'Generator' })
+            .setFooter({ text: 'Code & Claim' })
             .setTimestamp();
           await interaction.reply({ embeds: [embed], ephemeral: true }).catch(() => {});
         }
@@ -304,14 +302,24 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    
-    // Modals
     if (interaction.isModalSubmit?.()) {
       try {
         const customId = interaction.customId;
         if (customId === 'claim_code_modal') {
-          const { handleClaimCodeModal } = require('./commands/claimcodepanel');
-          await handleClaimCodeModal(interaction, client);
+          try {
+            const { handleClaimCodeModal } = require('./commands/claimcodepanel');
+            await handleClaimCodeModal(interaction, client);
+          } catch (err) {
+            console.error('⚠️ Error in premium claim modal:', err?.message || err);
+          }
+          return;
+        } else if (customId === 'claim_code_modal_free') {
+          try {
+            const { handleClaimCodeModalFree } = require('./commands/claimpanelfree');
+            await handleClaimCodeModalFree(interaction, client);
+          } catch (err) {
+            console.error('⚠️ Error in free claim modal:', err?.message || err);
+          }
           return;
         }
       } catch (err) {
@@ -320,7 +328,6 @@ client.on('interactionCreate', async (interaction) => {
       return;
     }
 
-    // Chat commands
     if (!interaction.isChatInputCommand?.()) return;
 
     try {
@@ -349,7 +356,6 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// Drop system
 function startDrop(client) {
   try {
     if (dropInterval) clearInterval(dropInterval);
@@ -389,7 +395,7 @@ function startDrop(client) {
             { name: 'Category', value: String(cat), inline: true },
             { name: 'Stock Remaining', value: String(dropStockCount(cat)), inline: true }
           )
-          .setFooter({ text: 'Generator • React to claim!' })
+          .setFooter({ text: 'Code & Claim • React to claim!' })
           .setTimestamp();
 
         const msg = await channel.send({ embeds: [embed] }).catch(err => {
@@ -414,7 +420,7 @@ function startDrop(client) {
               .setTitle(`✅ Drop Claimed — ${cat}`)
               .setDescription('You were first! Here are your credentials:')
               .addFields({ name: '🔑 Login Credentials', value: `\`\`\`${account}\`\`\`` })
-              .setFooter({ text: 'Generator • Keep these safe!' })
+              .setFooter({ text: 'Code & Claim • Keep these safe!' })
               .setTimestamp();
 
             try {
@@ -453,7 +459,6 @@ client.stopDrop = () => {
 };
 client.isDropActive = () => dropInterval !== null;
 
-// Global error handling
 process.on('unhandledRejection', (reason) => {
   console.error('⚠️ Unhandled promise rejection:', reason?.message || reason);
 });
@@ -462,7 +467,6 @@ process.on('uncaughtException', (err) => {
   console.error('⚠️ Uncaught exception:', err?.message || err);
 });
 
-// Login with error handling
 client.login(process.env.BOT_TOKEN).catch(err => {
   console.error('❌ FATAL: Failed to login:', err?.message || err);
   process.exit(1);
