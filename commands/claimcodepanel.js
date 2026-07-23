@@ -3,45 +3,26 @@ const { getUser, updateUser, getConfig } = require('../database');
 const fs = require('fs');
 const path = require('path');
 
-// Duration in seconds
-const DURATION_SECONDS = {
-  '1DAY': 86400,      // 1 day
-  '3DAY': 259200,     // 3 days
-  '1WEEK': 604800,    // 1 week
-  '1MONTH': 2592000   // ~30 days
-};
-
-const DURATION_DISPLAY = {
-  '1DAY': '1️⃣ Day',
-  '3DAY': '3️⃣ Days',
-  '1WEEK': '📆 Week',
-  '1MONTH': '📅 Month',
-  'LIFETIME': '♾️ Lifetime'
-};
-
 // Helper to find and remove a code from stock
 function findAndRemoveCode(code) {
-  const durations = ['1DAY', '3DAY', '1WEEK', '1MONTH', 'LIFETIME'];
   const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+  const filePath = path.join(dataDir, 'codes_PREMIUM.json');
 
-  for (const dur of durations) {
-    const filePath = path.join(dataDir, `codes_${dur}.json`);
-    try {
-      if (!fs.existsSync(filePath)) continue;
+  try {
+    if (!fs.existsSync(filePath)) return null;
 
-      let stock = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-      if (!stock[dur]) stock[dur] = [];
+    let stock = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (!stock.premium) stock.premium = [];
 
-      const index = stock[dur].indexOf(code);
-      if (index !== -1) {
-        // Found it! Remove and save
-        stock[dur].splice(index, 1);
-        fs.writeFileSync(filePath, JSON.stringify(stock, null, 2));
-        return dur;
-      }
-    } catch (err) {
-      console.error(`Error checking codes for ${dur}:`, err);
+    const index = stock.premium.indexOf(code);
+    if (index !== -1) {
+      // Found it! Remove and save
+      stock.premium.splice(index, 1);
+      fs.writeFileSync(filePath, JSON.stringify(stock, null, 2));
+      return true;
     }
+  } catch (err) {
+    console.error(`Error checking codes:`, err);
   }
 
   return null;
@@ -53,7 +34,7 @@ module.exports = {
     .setDescription('Show the promotional code claim panel'),
 
   async execute(interaction) {
-    // Get the panel type from config
+    // Get the panel type from config (default to premium)
     const panelType = getConfig('claim_panel_type', 'premium');
 
     let embed;
@@ -63,7 +44,7 @@ module.exports = {
       embed = new EmbedBuilder()
         .setColor(0x57F287)
         .setTitle('🎁 Claim your free code here!')
-        .setDescription('Have a free code? Use the button below to unlock free account access!')
+        .setDescription('Use the button below to unlock a free account!')
         .addFields({
           name: '✨ What do I get?',
           value: '🌊 Free account access\n📦 Basic account features\n🎉 Free stuff!',
@@ -75,8 +56,13 @@ module.exports = {
       // Premium claim panel (default)
       embed = new EmbedBuilder()
         .setColor(0xFEE75C)
-        .setTitle('Premium Claim!🌟')
-        .setDescription('Claim 1 Really good account for 5$ each (comes with free link)')
+        .setTitle('🌟Claim your Premium code here!')
+        .setDescription('Have a Premium code? Use the button below to unlock free account access!')
+        .addFields({
+          name: '✨ What do I get?',
+          value: '🌊 Really good accounts\n📦 If bad make a ticket for replacement\n🎉 Comes with 1 free link',
+          inline: false
+        })
         .setFooter({ text: 'Generator • One claim per code' })
         .setTimestamp();
     }
@@ -131,27 +117,17 @@ async function handleClaimCodeModal(interaction, client) {
 
   try {
     // Find and remove the code
-    const usedDuration = findAndRemoveCode(code);
+    const codeFound = findAndRemoveCode(code);
 
-    if (!usedDuration) {
+    if (!codeFound) {
       return interaction.reply({ content: '❌ Invalid or already claimed promotional code.', ephemeral: true });
     }
 
     // Grant premium subscription access
-    let newExpires = 0;
-
-    if (usedDuration === 'LIFETIME') {
-      // Set to year 2100 (never expires in practice)
-      newExpires = Math.floor(new Date(2100, 0, 1).getTime() / 1000);
-    } else {
-      // Add duration seconds to now
-      const durationSeconds = DURATION_SECONDS[usedDuration] || 86400;
-      newExpires = Math.floor(Date.now() / 1000) + durationSeconds;
-    }
-
+    const premiumExpires = Math.floor(new Date(2100, 0, 1).getTime() / 1000);
     updateUser(interaction.user.id, {
       subscription: 'premium',
-      sub_expires: newExpires
+      sub_expires: premiumExpires
     });
 
     // Try to assign premium role
@@ -168,22 +144,18 @@ async function handleClaimCodeModal(interaction, client) {
     }
 
     // Send success message to user
-    const expiryDate = newExpires > Math.floor(new Date(2099, 0, 1).getTime() / 1000) 
-      ? 'Never (Lifetime)' 
-      : new Date(newExpires * 1000).toLocaleString();
-
     const successEmbed = new EmbedBuilder()
       .setColor(0x57F287)
       .setTitle('✅ Premium Access Granted!')
-      .setDescription(`You now have **${DURATION_DISPLAY[usedDuration]}** of premium subscription!`)
+      .setDescription(`You now have premium subscription!`)
       .addFields({
         name: '📊 Subscription Details',
-        value: `**Duration:** ${DURATION_DISPLAY[usedDuration]}\n**Expires:** ${expiryDate}`,
+        value: `**Status:** Premium\n**Expires:** Never (Lifetime)`,
         inline: false
       })
       .addFields({
         name: '🎯 Next Steps',
-        value: 'Use `/generate premium` to generate premium accounts!\n\nYou now have full access to premium features and account generation.',
+        value: 'Use `/claim type:Premium` to generate premium accounts!',
         inline: false
       })
       .setFooter({ text: 'Generator • Enjoy your premium subscription!' })
@@ -209,8 +181,8 @@ async function handleClaimCodeModal(interaction, client) {
               inline: true
             })
             .addFields({
-              name: '📅 Duration',
-              value: DURATION_DISPLAY[usedDuration],
+              name: '⭐ Type',
+              value: 'Premium',
               inline: true
             })
             .addFields({
