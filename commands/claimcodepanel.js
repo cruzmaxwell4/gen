@@ -54,14 +54,9 @@ module.exports = {
 
   async execute(interaction) {
     const embed = new EmbedBuilder()
-      .setColor(0x5865F2)
-      .setTitle('🎁 Claim your prem gen here!')
-      .setDescription('Have a promotional code? Use the button below to unlock premium access!')
-      .addFields({
-        name: '✨ What do I get?',
-        value: '🌟 Premium subscription for set duration\n📦 Access to /generate premium accounts\n🎨 Premium-only features',
-        inline: false
-      })
+      .setColor(0xFEE75C)
+      .setTitle('Premium Claim!🌟')
+      .setDescription('Claim 1 Really good account for 5$ each (comes with free link)')
       .setFooter({ text: 'Generator • One claim per code' })
       .setTimestamp();
 
