@@ -5,18 +5,15 @@ const { addStockBulk } = require('../database');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('addcodes')
-    .setDescription('Create promotional codes from a file')
+    .setDescription('Add promotional codes (Premium or Free)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(opt =>
-      opt.setName('duration')
-        .setDescription('Duration type for the codes')
+      opt.setName('type')
+        .setDescription('Code type')
         .setRequired(true)
         .addChoices(
-          { name: '⏳ 1 Day', value: '1DAY' },
-          { name: '📅 3 Days', value: '3DAY' },
-          { name: '📆 1 Week', value: '1WEEK' },
-          { name: '📊 1 Month', value: '1MONTH' },
-          { name: '♾️ Lifetime', value: 'LIFETIME' }
+          { name: '⭐ Premium Codes (One-time use)', value: 'premium' },
+          { name: '🌊 Free Codes (Reusable)', value: 'free' }
         )
     )
     .addAttachmentOption(opt =>
@@ -30,7 +27,7 @@ module.exports = {
       return interaction.reply({ content: '❌ Only the bot owner can use this command.', ephemeral: true });
     }
 
-    const duration = interaction.options.getString('duration');
+    const type = interaction.options.getString('type');
     const attachment = interaction.options.getAttachment('file');
 
     // Validate file type
@@ -60,29 +57,29 @@ module.exports = {
         return interaction.editReply({ content: '❌ No valid codes found in the file.' });
       }
 
-      // Store codes in stock - category is duration, table is codes_DURATION
-      const table = `codes_${duration}`;
-      const added = addStockBulk(duration, codes, table);
+      // Store codes in stock - table is codes_PREMIUM or codes_FREE
+      const table = `codes_${type.toUpperCase()}`;
+      const added = addStockBulk(type, codes, table);
 
       if (added === 0) {
         return interaction.editReply({ content: '❌ Failed to save codes.' });
       }
 
-      const durationLabel = {
-        '1DAY': '⏳ 1 Day',
-        '3DAY': '📅 3 Days',
-        '1WEEK': '📆 1 Week',
-        '1MONTH': '📊 1 Month',
-        'LIFETIME': '♾️ Lifetime'
-      }[duration];
+      const typeLabel = type === 'premium' ? '⭐ Premium' : '🌊 Free';
+      const reuseInfo = type === 'free' ? '🔄 Reusable (can be claimed multiple times)' : '🔐 One-time use (deleted after claim)';
 
       const embed = new EmbedBuilder()
-        .setColor(0x57F287)
+        .setColor(type === 'premium' ? 0xFEE75C : 0x57F287)
         .setTitle('✅ Codes Added Successfully')
-        .setDescription(`Added **${added}** code(s) to **${durationLabel}** tier`)
+        .setDescription(`Added **${added}** ${typeLabel} code(s)`)
         .addFields({
           name: '📊 Details',
-          value: `**File:** ${attachment.name}\n**Duration:** ${durationLabel}\n**Codes Imported:** ${added}`,
+          value: `**File:** ${attachment.name}\n**Type:** ${typeLabel}\n**Codes Imported:** ${added}`,
+          inline: false
+        })
+        .addFields({
+          name: '📝 Code Info',
+          value: reuseInfo,
           inline: false
         })
         .setFooter({ text: 'Generator • Codes are ready to claim!' })
