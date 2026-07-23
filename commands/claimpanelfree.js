@@ -10,7 +10,7 @@ module.exports = {
     const embed = new EmbedBuilder()
       .setColor(0x57F287)
       .setTitle('🎁 Claim your free code here!')
-      .setDescription('Have a free code? Use the button below to unlock free account access!')
+      .setDescription('Use the button below to unlock a free account!')
       .addFields({
         name: '✨ What do I get?',
         value: '🌊 Free account access\n📦 Basic account features\n🎉 Free stuff!',
