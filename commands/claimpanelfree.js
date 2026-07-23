@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { getConfig, popStock } = require('../database');
+const { getConfig, popStock, getUser, updateUser } = require('../database');
 const fs = require('fs');
 const path = require('path');
 
@@ -70,6 +70,25 @@ async function handleClaimCodeModalFree(interaction, client) {
   }
 
   try {
+    // Check cooldown
+    const cooldownSeconds = parseInt(getConfig('cooldown_free', '0')) || 0;
+    const user = getUser(interaction.user.id);
+    
+    if (cooldownSeconds > 0 && user) {
+      const lastClaimTime = user.last_claim_free || 0;
+      const now = Math.floor(Date.now() / 1000);
+      const timeSinceLastClaim = now - lastClaimTime;
+
+      if (timeSinceLastClaim < cooldownSeconds) {
+        const remainingSeconds = cooldownSeconds - timeSinceLastClaim;
+        const minutes = Math.ceil(remainingSeconds / 60);
+        return interaction.reply({ 
+          content: `⏳ You must wait **${minutes} minute(s)** before claiming another free code!`,
+          ephemeral: true 
+        });
+      }
+    }
+
     const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
     const freeCodesPath = path.join(dataDir, 'codes_FREE.json');
 
@@ -96,6 +115,11 @@ async function handleClaimCodeModalFree(interaction, client) {
         ephemeral: true 
       });
     }
+
+    // Update user with cooldown
+    updateUser(interaction.user.id, {
+      last_claim_free: Math.floor(Date.now() / 1000)
+    });
 
     // SUCCESS - Code is valid and reusable (never deleted), but account IS deleted
     const successEmbed = new EmbedBuilder()

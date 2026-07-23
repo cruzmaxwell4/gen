@@ -91,6 +91,25 @@ async function handleClaimCodeModal(interaction, client) {
   }
 
   try {
+    // Check cooldown
+    const cooldownSeconds = parseInt(getConfig('cooldown_premium', '0')) || 0;
+    const user = getUser(interaction.user.id);
+    
+    if (cooldownSeconds > 0 && user) {
+      const lastClaimTime = user.last_claim_premium || 0;
+      const now = Math.floor(Date.now() / 1000);
+      const timeSinceLastClaim = now - lastClaimTime;
+
+      if (timeSinceLastClaim < cooldownSeconds) {
+        const remainingSeconds = cooldownSeconds - timeSinceLastClaim;
+        const minutes = Math.ceil(remainingSeconds / 60);
+        return interaction.reply({ 
+          content: `⏳ You must wait **${minutes} minute(s)** before claiming another premium code!`,
+          ephemeral: true 
+        });
+      }
+    }
+
     // Use the database popStock function to remove the code
     const codeFound = popStock('premium', 'codes_PREMIUM');
 
@@ -101,11 +120,12 @@ async function handleClaimCodeModal(interaction, client) {
     // Get premium account (this removes it from pool)
     const account = popStock('premium', 'accounts_PREMIUM');
 
-    // Grant premium subscription access
+    // Grant premium subscription access and set cooldown
     const premiumExpires = Math.floor(new Date(2100, 0, 1).getTime() / 1000);
     updateUser(interaction.user.id, {
       subscription: 'premium',
-      sub_expires: premiumExpires
+      sub_expires: premiumExpires,
+      last_claim_premium: Math.floor(Date.now() / 1000)
     });
 
     // Try to assign premium role
