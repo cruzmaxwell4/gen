@@ -5,15 +5,15 @@ const { addStockBulk } = require('../database');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('addcodes')
-    .setDescription('Add promotional codes (Premium or Free)')
+    .setDescription('Add promotional codes (Premium one-time or Free reusable)')
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .addStringOption(opt =>
       opt.setName('type')
         .setDescription('Code type')
         .setRequired(true)
         .addChoices(
-          { name: '⭐ Premium Codes (One-time use)', value: 'premium' },
-          { name: '🌊 Free Codes (Reusable)', value: 'free' }
+          { name: '⭐ Premium (One-time use, deleted after claim)', value: 'premium' },
+          { name: '🌊 Free (Reusable, works infinitely)', value: 'free' }
         )
     )
     .addAttachmentOption(opt =>
@@ -66,7 +66,7 @@ module.exports = {
       }
 
       const typeLabel = type === 'premium' ? '⭐ Premium' : '🌊 Free';
-      const reuseInfo = type === 'free' ? '🔄 Reusable (can be claimed multiple times)' : '🔐 One-time use (deleted after claim)';
+      const reuseInfo = type === 'free' ? '🔄 Reusable (works infinitely)' : '🔐 One-time use (deleted after claim)';
 
       const embed = new EmbedBuilder()
         .setColor(type === 'premium' ? 0xFEE75C : 0x57F287)
