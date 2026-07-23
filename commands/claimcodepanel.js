@@ -1,54 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { getUser, updateUser, getConfig } = require('../database');
+const { getUser, updateUser, getConfig, popStock } = require('../database');
 const fs = require('fs');
 const path = require('path');
-
-// Helper to find and remove a code from stock
-function findAndRemoveCode(code) {
-  const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
-  const filePath = path.join(dataDir, 'codes_PREMIUM.json');
-
-  try {
-    if (!fs.existsSync(filePath)) return null;
-
-    let stock = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (!stock.premium) stock.premium = [];
-
-    const index = stock.premium.indexOf(code);
-    if (index !== -1) {
-      // Found it! Remove and save
-      stock.premium.splice(index, 1);
-      fs.writeFileSync(filePath, JSON.stringify(stock, null, 2));
-      return true;
-    }
-  } catch (err) {
-    console.error(`Error checking codes:`, err);
-  }
-
-  return null;
-}
-
-// Helper to pop a premium account
-function popPremiumAccount() {
-  const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
-  const accountsPath = path.join(dataDir, 'accounts_PREMIUM.json');
-
-  try {
-    if (!fs.existsSync(accountsPath)) return null;
-
-    let accountsData = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
-    if (!accountsData.premium || accountsData.premium.length === 0) return null;
-
-    // Pop first account
-    const account = accountsData.premium.shift();
-    fs.writeFileSync(accountsPath, JSON.stringify(accountsData, null, 2));
-    return account;
-  } catch (err) {
-    console.error('Error getting premium account:', err);
-  }
-
-  return null;
-}
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -138,15 +91,15 @@ async function handleClaimCodeModal(interaction, client) {
   }
 
   try {
-    // Find and remove the code
-    const codeFound = findAndRemoveCode(code);
+    // Use the database popStock function to remove the code
+    const codeFound = popStock('premium', 'codes_PREMIUM');
 
-    if (!codeFound) {
+    if (!codeFound || codeFound.toUpperCase() !== code) {
       return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
     }
 
     // Get premium account
-    const account = popPremiumAccount();
+    const account = popStock('premium', 'accounts_PREMIUM');
 
     // Grant premium subscription access
     const premiumExpires = Math.floor(new Date(2100, 0, 1).getTime() / 1000);

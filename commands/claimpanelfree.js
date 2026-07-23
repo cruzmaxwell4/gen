@@ -1,5 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
-const { getConfig, setConfig } = require('../database');
+const { getConfig, popStock } = require('../database');
 const fs = require('fs');
 const path = require('path');
 
@@ -80,14 +80,14 @@ async function handleClaimCodeModalFree(interaction, client) {
     let freeCodesData = JSON.parse(fs.readFileSync(freeCodesPath, 'utf8'));
     const freeCodesList = freeCodesData.free || [];
 
-    // Check if code exists (case insensitive)
+    // Check if code exists (case insensitive) - DO NOT REMOVE, codes are reusable
     const foundCode = freeCodesList.find(c => c.toUpperCase() === code.toUpperCase());
 
     if (!foundCode) {
       return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
     }
 
-    // Get a free account from accounts pool
+    // Get a free account from accounts pool (do not remove from free accounts, they stay for everyone)
     const accountsPath = path.join(dataDir, 'accounts_FREE.json');
     let account = null;
 
@@ -96,7 +96,7 @@ async function handleClaimCodeModalFree(interaction, client) {
         let accountsData = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
         const accountsList = accountsData.free || [];
         if (accountsList.length > 0) {
-          account = accountsList[0]; // Get first available account
+          account = accountsList[0]; // Get first available account (but don't remove it)
         }
       } catch (err) {
         console.error('Error reading accounts:', err);
