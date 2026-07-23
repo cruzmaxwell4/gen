@@ -53,12 +53,33 @@ module.exports = {
     .setDescription('Show the promotional code claim panel'),
 
   async execute(interaction) {
-    const embed = new EmbedBuilder()
-      .setColor(0xFEE75C)
-      .setTitle('Premium Claim!🌟')
-      .setDescription('Claim 1 Really good account for 5$ each (comes with free link)')
-      .setFooter({ text: 'Generator • One claim per code' })
-      .setTimestamp();
+    // Get the panel type from config
+    const panelType = getConfig('claim_panel_type', 'premium');
+
+    let embed;
+
+    if (panelType === 'free') {
+      // Free claim panel
+      embed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle('🎁 Claim your free code here!')
+        .setDescription('Have a free code? Use the button below to unlock free account access!')
+        .addFields({
+          name: '✨ What do I get?',
+          value: '🌊 Free account access\n📦 Basic account features\n🎉 Free stuff!',
+          inline: false
+        })
+        .setFooter({ text: 'Generator • One claim per code' })
+        .setTimestamp();
+    } else {
+      // Premium claim panel (default)
+      embed = new EmbedBuilder()
+        .setColor(0xFEE75C)
+        .setTitle('Premium Claim!🌟')
+        .setDescription('Claim 1 Really good account for 5$ each (comes with free link)')
+        .setFooter({ text: 'Generator • One claim per code' })
+        .setTimestamp();
+    }
 
     // Try to load custom image if set
     const panelImage = getConfig('panel_image');
