@@ -166,7 +166,65 @@ async function handleClaimCodeModal(interaction, client) {
       }
     }
 
-    // Send log message to log channel if configured
+    // Send to transcript channel
+    const transcriptChannelId = getConfig('transcript_channel');
+    if (transcriptChannelId && client) {
+      try {
+        const transcriptChannel = await client.channels.fetch(transcriptChannelId);
+        
+        if (transcriptChannel?.isTextBased?.()) {
+          const guildIcon = interaction.guild?.iconURL({ dynamic: true }) || null;
+          const userAvatar = interaction.user.displayAvatarURL({ dynamic: true, size: 256 });
+
+          const transcriptEmbed = new EmbedBuilder()
+            .setColor(0xFEE75C)
+            .setTitle('📝 Premium Code Claimed - Transcript')
+            .setAuthor({ 
+              name: interaction.guild?.name || 'Unknown Server',
+              iconURL: guildIcon
+            })
+            .setThumbnail(userAvatar)
+            .addFields({
+              name: '👤 User',
+              value: `${interaction.user.username}#${interaction.user.discriminator}`,
+              inline: true
+            })
+            .addFields({
+              name: '🆔 User ID',
+              value: interaction.user.id,
+              inline: true
+            })
+            .addFields({
+              name: '🔑 Code Claimed',
+              value: `\`${code}\``,
+              inline: false
+            })
+            .addFields({
+              name: '🎁 Account Received',
+              value: account ? `\`\`\`${account}\`\`\`` : '❌ No account available',
+              inline: false
+            })
+            .addFields({
+              name: '⏰ Claimed At',
+              value: new Date().toLocaleString(),
+              inline: false
+            })
+            .addFields({
+              name: '⭐ Tier',
+              value: 'Premium',
+              inline: true
+            })
+            .setFooter({ text: 'Code & Claim • Transcript Log' })
+            .setTimestamp();
+
+          await transcriptChannel.send({ embeds: [transcriptEmbed] });
+        }
+      } catch (err) {
+        console.error('⚠️ Failed to send transcript:', err?.message || err);
+      }
+    }
+
+    // Send to log channel (old behavior)
     const logChannelId = getConfig('log_channel');
     if (logChannelId && client) {
       try {
