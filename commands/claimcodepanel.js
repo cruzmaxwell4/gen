@@ -28,6 +28,28 @@ function findAndRemoveCode(code) {
   return null;
 }
 
+// Helper to pop a premium account
+function popPremiumAccount() {
+  const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+  const accountsPath = path.join(dataDir, 'accounts_PREMIUM.json');
+
+  try {
+    if (!fs.existsSync(accountsPath)) return null;
+
+    let accountsData = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
+    if (!accountsData.premium || accountsData.premium.length === 0) return null;
+
+    // Pop first account
+    const account = accountsData.premium.shift();
+    fs.writeFileSync(accountsPath, JSON.stringify(accountsData, null, 2));
+    return account;
+  } catch (err) {
+    console.error('Error getting premium account:', err);
+  }
+
+  return null;
+}
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('claimcodepanel')
@@ -50,7 +72,7 @@ module.exports = {
           value: '🌊 Free account access\n📦 Basic account features\n🎉 Free stuff!',
           inline: false
         })
-        .setFooter({ text: 'Generator • One claim per code' })
+        .setFooter({ text: 'Code & Claim • One claim per code' })
         .setTimestamp();
     } else {
       // Premium claim panel (default)
@@ -63,7 +85,7 @@ module.exports = {
           value: '🌊 Really good accounts\n📦 If bad make a ticket for replacement\n🎉 Comes with 1 free link',
           inline: false
         })
-        .setFooter({ text: 'Generator • One claim per code' })
+        .setFooter({ text: 'Code & Claim • One claim per code' })
         .setTimestamp();
     }
 
@@ -112,7 +134,7 @@ async function handleClaimCodeModal(interaction, client) {
   const code = interaction.fields.getTextInputValue('promo_code_input')?.toUpperCase().trim();
 
   if (!code) {
-    return interaction.reply({ content: '❌ Please enter a valid code.', ephemeral: true });
+    return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
   }
 
   try {
@@ -120,8 +142,11 @@ async function handleClaimCodeModal(interaction, client) {
     const codeFound = findAndRemoveCode(code);
 
     if (!codeFound) {
-      return interaction.reply({ content: '❌ Invalid or already claimed promotional code.', ephemeral: true });
+      return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
     }
+
+    // Get premium account
+    const account = popPremiumAccount();
 
     // Grant premium subscription access
     const premiumExpires = Math.floor(new Date(2100, 0, 1).getTime() / 1000);
@@ -155,13 +180,38 @@ async function handleClaimCodeModal(interaction, client) {
       })
       .addFields({
         name: '🎯 Next Steps',
-        value: 'Use `/claim type:Premium` to generate premium accounts!',
+        value: account
+          ? `Your premium account has been sent to your DMs!`
+          : 'Please contact support for your account.',
         inline: false
       })
-      .setFooter({ text: 'Generator • Enjoy your premium subscription!' })
+      .setFooter({ text: 'Code & Claim • Enjoy your premium subscription!' })
       .setTimestamp();
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
+
+    // If account exists, send it to user DM
+    if (account) {
+      try {
+        const accountEmbed = new EmbedBuilder()
+          .setColor(0xFEE75C)
+          .setTitle('✅ Premium Account Details')
+          .setDescription('Here are your premium account credentials:')
+          .addFields({
+            name: '🔑 Account',
+            value: `\`\`\`${account}\`\`\``,
+            inline: false
+          })
+          .setFooter({ text: 'Code & Claim • Keep these safe!' })
+          .setTimestamp();
+
+        await interaction.user.send({ embeds: [accountEmbed] }).catch(err => {
+          console.error('Failed to send account to DM:', err?.message || err);
+        });
+      } catch (err) {
+        console.error('Error sending account:', err);
+      }
+    }
 
     // Send log message to log channel if configured
     const logChannelId = getConfig('log_channel');
@@ -195,7 +245,7 @@ async function handleClaimCodeModal(interaction, client) {
               value: new Date().toLocaleString(),
               inline: false
             })
-            .setFooter({ text: 'Generator • Code Claim Logs' })
+            .setFooter({ text: 'Code & Claim • Code Claim Logs' })
             .setTimestamp();
 
           await logChannel.send({ embeds: [logEmbed] });

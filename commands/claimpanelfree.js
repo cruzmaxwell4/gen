@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const { getConfig, setConfig } = require('../database');
+const fs = require('fs');
+const path = require('path');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -16,7 +18,7 @@ module.exports = {
         value: '🌊 Free account access\n📦 Basic account features\n🎉 Free stuff!',
         inline: false
       })
-      .setFooter({ text: 'Generator • One claim per code' })
+      .setFooter({ text: 'Code & Claim • One claim per code' })
       .setTimestamp();
 
     // Try to load custom image if set
@@ -64,19 +66,15 @@ async function handleClaimCodeModalFree(interaction, client) {
   const code = interaction.fields.getTextInputValue('free_code_input')?.toUpperCase().trim();
 
   if (!code) {
-    return interaction.reply({ content: '❌ Please enter a valid code.', ephemeral: true });
+    return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
   }
 
   try {
-    const fs = require('fs');
-    const path = require('path');
-
-    // Check if code exists in free codes
     const dataDir = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
     const freeCodesPath = path.join(dataDir, 'codes_FREE.json');
 
     if (!fs.existsSync(freeCodesPath)) {
-      return interaction.reply({ content: '❌ No free codes available.', ephemeral: true });
+      return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
     }
 
     let freeCodesData = JSON.parse(fs.readFileSync(freeCodesPath, 'utf8'));
@@ -86,7 +84,23 @@ async function handleClaimCodeModalFree(interaction, client) {
     const foundCode = freeCodesList.find(c => c.toUpperCase() === code.toUpperCase());
 
     if (!foundCode) {
-      return interaction.reply({ content: '❌ Invalid free code. Code does not exist.', ephemeral: true });
+      return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
+    }
+
+    // Get a free account from accounts pool
+    const accountsPath = path.join(dataDir, 'accounts_FREE.json');
+    let account = null;
+
+    if (fs.existsSync(accountsPath)) {
+      try {
+        let accountsData = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
+        const accountsList = accountsData.free || [];
+        if (accountsList.length > 0) {
+          account = accountsList[0]; // Get first available account
+        }
+      } catch (err) {
+        console.error('Error reading accounts:', err);
+      }
     }
 
     // SUCCESS - Code is valid and reusable (never deleted)
@@ -96,13 +110,38 @@ async function handleClaimCodeModalFree(interaction, client) {
       .setDescription(`Your free code **${code}** has been claimed!\n\nYou now have free account access.`)
       .addFields({
         name: '🎯 Next Steps',
-        value: 'Use `/claim type:Free` to generate your free account!',
+        value: account 
+          ? `Your account has been sent to your DMs!`
+          : 'Please contact support for your account.',
         inline: false
       })
-      .setFooter({ text: 'Generator • Enjoy your free account!' })
+      .setFooter({ text: 'Code & Claim • Enjoy your free account!' })
       .setTimestamp();
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
+
+    // If account exists, send it to user DM
+    if (account) {
+      try {
+        const accountEmbed = new EmbedBuilder()
+          .setColor(0x57F287)
+          .setTitle('✅ Free Account Details')
+          .setDescription('Here are your free account credentials:')
+          .addFields({
+            name: '🔑 Account',
+            value: `\`\`\`${account}\`\`\``,
+            inline: false
+          })
+          .setFooter({ text: 'Code & Claim • Keep these safe!' })
+          .setTimestamp();
+
+        await interaction.user.send({ embeds: [accountEmbed] }).catch(err => {
+          console.error('Failed to send account to DM:', err?.message || err);
+        });
+      } catch (err) {
+        console.error('Error sending account:', err);
+      }
+    }
 
     // Send log message to log channel if configured
     const { getConfig: getConfigFunc } = require('../database');
@@ -137,7 +176,7 @@ async function handleClaimCodeModalFree(interaction, client) {
               value: 'This code is reusable and can be claimed again',
               inline: false
             })
-            .setFooter({ text: 'Generator • Free Code Claim Logs' })
+            .setFooter({ text: 'Code & Claim • Free Code Claim Logs' })
             .setTimestamp();
 
           await logChannel.send({ embeds: [logEmbed] });
