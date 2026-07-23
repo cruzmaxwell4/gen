@@ -98,7 +98,7 @@ async function handleClaimCodeModal(interaction, client) {
       return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
     }
 
-    // Get premium account
+    // Get premium account (this removes it from pool)
     const account = popStock('premium', 'accounts_PREMIUM');
 
     // Grant premium subscription access
@@ -143,7 +143,7 @@ async function handleClaimCodeModal(interaction, client) {
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
 
-    // If account exists, send it to user DM
+    // If account exists, send it to user DM AND DELETE FROM POOL
     if (account) {
       try {
         const accountEmbed = new EmbedBuilder()

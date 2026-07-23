@@ -87,32 +87,24 @@ async function handleClaimCodeModalFree(interaction, client) {
       return interaction.reply({ content: '❌ Invaild Code❌', ephemeral: true });
     }
 
-    // Get a free account from accounts pool (do not remove from free accounts, they stay for everyone)
-    const accountsPath = path.join(dataDir, 'accounts_FREE.json');
-    let account = null;
+    // Get a free account from accounts pool (REMOVE IT - one per claim, not reusable)
+    const account = popStock('free', 'accounts_FREE');
 
-    if (fs.existsSync(accountsPath)) {
-      try {
-        let accountsData = JSON.parse(fs.readFileSync(accountsPath, 'utf8'));
-        const accountsList = accountsData.free || [];
-        if (accountsList.length > 0) {
-          account = accountsList[0]; // Get first available account (but don't remove it)
-        }
-      } catch (err) {
-        console.error('Error reading accounts:', err);
-      }
+    if (!account) {
+      return interaction.reply({ 
+        content: '❌ No accounts available! Please contact support.', 
+        ephemeral: true 
+      });
     }
 
-    // SUCCESS - Code is valid and reusable (never deleted)
+    // SUCCESS - Code is valid and reusable (never deleted), but account IS deleted
     const successEmbed = new EmbedBuilder()
       .setColor(0x57F287)
       .setTitle('✅ Free Code Claimed!')
       .setDescription(`Your free code **${code}** has been claimed!\n\nYou now have free account access.`)
       .addFields({
         name: '🎯 Next Steps',
-        value: account 
-          ? `Your account has been sent to your DMs!`
-          : 'Please contact support for your account.',
+        value: `Your account has been sent to your DMs!`,
         inline: false
       })
       .setFooter({ text: 'Code & Claim • Enjoy your free account!' })
@@ -120,27 +112,25 @@ async function handleClaimCodeModalFree(interaction, client) {
 
     await interaction.reply({ embeds: [successEmbed], ephemeral: true });
 
-    // If account exists, send it to user DM
-    if (account) {
-      try {
-        const accountEmbed = new EmbedBuilder()
-          .setColor(0x57F287)
-          .setTitle('✅ Free Account Details')
-          .setDescription('Here are your free account credentials:')
-          .addFields({
-            name: '🔑 Account',
-            value: `\`\`\`${account}\`\`\``,
-            inline: false
-          })
-          .setFooter({ text: 'Code & Claim • Keep these safe!' })
-          .setTimestamp();
+    // Send account to user DM (account has been deleted from pool)
+    try {
+      const accountEmbed = new EmbedBuilder()
+        .setColor(0x57F287)
+        .setTitle('✅ Free Account Details')
+        .setDescription('Here are your free account credentials:')
+        .addFields({
+          name: '🔑 Account',
+          value: `\`\`\`${account}\`\`\``,
+          inline: false
+        })
+        .setFooter({ text: 'Code & Claim • Keep these safe!' })
+        .setTimestamp();
 
-        await interaction.user.send({ embeds: [accountEmbed] }).catch(err => {
-          console.error('Failed to send account to DM:', err?.message || err);
-        });
-      } catch (err) {
-        console.error('Error sending account:', err);
-      }
+      await interaction.user.send({ embeds: [accountEmbed] }).catch(err => {
+        console.error('Failed to send account to DM:', err?.message || err);
+      });
+    } catch (err) {
+      console.error('Error sending account:', err);
     }
 
     // Send to transcript channel
@@ -178,7 +168,7 @@ async function handleClaimCodeModalFree(interaction, client) {
             })
             .addFields({
               name: '🎁 Account Received',
-              value: account ? `\`\`\`${account}\`\`\`` : '❌ No account available',
+              value: `\`\`\`${account}\`\`\``,
               inline: false
             })
             .addFields({
@@ -231,7 +221,7 @@ async function handleClaimCodeModalFree(interaction, client) {
             })
             .addFields({
               name: '📝 Note',
-              value: 'This code is reusable and can be claimed again',
+              value: 'Code is reusable - Account has been delivered and removed from pool',
               inline: false
             })
             .setFooter({ text: 'Code & Claim • Free Code Claim Logs' })
